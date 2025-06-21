@@ -166,7 +166,7 @@ func ProcessAttestation(ctx context.Context, spec *common.Spec, epc *common.Epoc
 	}
 
 	// Get committee indices from committee bits
-	committeeIndices := GetCommitteeIndices(attestation.CommitteeBits)
+	committeeIndices := GetCommitteeIndices(spec, attestation.CommitteeBits)
 	committeeOffset := uint64(0)
 
 	for _, committeeIndex := range committeeIndices {
@@ -349,7 +349,7 @@ func GetIndexedAttestationAttestingIndices(spec *common.Spec, state common.Beaco
 // Modified get_attesting_indices for EIP7549
 func GetAttestingIndices(spec *common.Spec, epc *common.EpochsContext, state common.BeaconState, attestation *Attestation) ([]common.ValidatorIndex, error) {
 	output := make([]common.ValidatorIndex, 0)
-	committeeIndices := GetCommitteeIndices(attestation.CommitteeBits)
+	committeeIndices := GetCommitteeIndices(spec, attestation.CommitteeBits)
 	committeeOffset := uint64(0)
 
 	slot, err := state.Slot()
@@ -387,9 +387,12 @@ func GetAttestingIndices(spec *common.Spec, epc *common.EpochsContext, state com
 }
 
 // GetCommitteeIndices extracts committee indices from committee bits
-func GetCommitteeIndices(committeeBits CommitteeBits) []common.CommitteeIndex {
+func GetCommitteeIndices(spec *common.Spec, committeeBits CommitteeBits) []common.CommitteeIndex {
 	indices := make([]common.CommitteeIndex, 0)
-	for i := uint64(0); i < uint64(committeeBits.BitLen()); i++ {
+	// [Fixed in Electra:EIP7549] Use spec.MAX_COMMITTEES_PER_SLOT instead of committeeBits.BitLen()
+	// to prevent reading beyond the logical bitfield boundary
+	maxCommittees := uint64(spec.MAX_COMMITTEES_PER_SLOT)
+	for i := uint64(0); i < maxCommittees; i++ {
 		if committeeBits.GetBit(i) {
 			indices = append(indices, common.CommitteeIndex(i))
 		}
@@ -451,6 +454,8 @@ func UpdateParticipation(spec *common.Spec, epc *common.EpochsContext, state *Be
 		// Use effective balance from EpochsContext for consistency with other forks
 		baseRewardPerIncrement := spec.EFFECTIVE_BALANCE_INCREMENT * common.Gwei(spec.BASE_REWARD_FACTOR) / epc.TotalActiveStakeSqRoot
 		increments := epc.EffectiveBalances[index] / spec.EFFECTIVE_BALANCE_INCREMENT
+		// [EIP-7251] For Electra, base rewards DO scale with effective balance
+		// up to the maximum effective balance (2048 ETH for compounding validators)
 		baseReward := increments * baseRewardPerIncrement
 		
 		// Debug: Print calculation details
