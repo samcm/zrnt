@@ -760,6 +760,30 @@ func (state *BeaconStateView) AppendPendingConsolidation(consolidation common.Pe
 	return pendingConsolidations.Append(container)
 }
 
+func (state *BeaconStateView) AppendPendingPartialWithdrawal(withdrawal common.PendingPartialWithdrawal) error {
+	pendingPartialWithdrawals, err := state.PendingPartialWithdrawals()
+	if err != nil {
+		return err
+	}
+	// Create a container for the withdrawal and append it
+	withdrawalContainer := ContainerType("PendingPartialWithdrawal", []FieldDef{
+		{Name: "index", Type: common.ValidatorIndexType},
+		{Name: "amount", Type: common.GweiType},
+		{Name: "withdrawable_epoch", Type: common.EpochType},
+	})
+	container := withdrawalContainer.New()
+	if err := container.Set(0, Uint64View(withdrawal.ValidatorIndex)); err != nil {
+		return err
+	}
+	if err := container.Set(1, Uint64View(withdrawal.Amount)); err != nil {
+		return err
+	}
+	if err := container.Set(2, Uint64View(withdrawal.WithdrawableEpoch)); err != nil {
+		return err
+	}
+	return pendingPartialWithdrawals.Append(container)
+}
+
 func (state *BeaconStateView) ForkSettings(spec *common.Spec) *common.ForkSettings {
 	return &common.ForkSettings{
 		MinSlashingPenaltyQuotient:     uint64(spec.MIN_SLASHING_PENALTY_QUOTIENT_BELLATRIX),

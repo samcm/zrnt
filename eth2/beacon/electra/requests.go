@@ -288,14 +288,13 @@ func ProcessWithdrawalRequest(ctx context.Context, spec *common.Spec, epc *commo
 		}
 
 		// Add to pending partial withdrawals
-		_ = common.PendingPartialWithdrawal{
+		pendingWithdrawal := common.PendingPartialWithdrawal{
 			ValidatorIndex:    validatorIndex,
 			Amount:            toWithdraw,
 			WithdrawableEpoch: withdrawableEpoch,
 		}
 
-		// For simplicity, skip modifying list - in production would properly handle this
-		return nil
+		return state.AppendPendingPartialWithdrawal(pendingWithdrawal)
 	}
 
 	return nil

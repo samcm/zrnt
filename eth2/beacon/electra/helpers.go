@@ -200,12 +200,14 @@ func IsValidDepositSignature(spec *common.Spec, pubkey common.BLSPubkey, withdra
 	
 	blsPub, err := pubkey.Pubkey()
 	if err != nil {
-		return false, err
+		// Invalid public key - deposit is invalid but block is still valid
+		return false, nil
 	}
 	
 	blsSig, err := signature.Signature()
 	if err != nil {
-		return false, err
+		// Invalid signature - deposit is invalid but block is still valid
+		return false, nil
 	}
 	
 	return blsu.Verify(blsPub, signingRoot[:], blsSig), nil

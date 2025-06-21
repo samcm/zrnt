@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/protolambda/zrnt/eth2/beacon/common"
+	"github.com/protolambda/zrnt/eth2/beacon/electra"
 	"github.com/protolambda/zrnt/eth2/beacon/phase0"
 	"github.com/protolambda/zrnt/tests/spec/test_util"
 )
@@ -22,6 +23,15 @@ func (c *ProposerSlashingTestCase) Run() error {
 	epc, err := common.NewEpochsContext(c.Spec, c.Pre)
 	if err != nil {
 		return err
+	}
+	// For Electra states, we need to use the Electra slashing logic
+	if common.IsElectraState(c.Pre) {
+		// Validate the proposer slashing first
+		if err := phase0.ValidateProposerSlashing(c.Spec, epc, c.Pre, &c.ProposerSlashing); err != nil {
+			return err
+		}
+		// Use Electra's SlashValidator for proper slashing penalties
+		return electra.SlashValidator(c.Spec, epc, c.Pre, c.ProposerSlashing.SignedHeader1.Message.ProposerIndex, nil)
 	}
 	return phase0.ProcessProposerSlashing(c.Spec, epc, c.Pre, &c.ProposerSlashing)
 }
