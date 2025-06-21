@@ -10,45 +10,45 @@ import (
 	blsu "github.com/protolambda/bls12-381-util"
 )
 
-// is_compounding_withdrawal_credential checks if the given withdrawal credentials have a compounding prefix
-func is_compounding_withdrawal_credential(withdrawal_credentials common.Root) bool {
+// IsCompoundingWithdrawalCredential checks if the given withdrawal credentials have a compounding prefix
+func IsCompoundingWithdrawalCredential(withdrawal_credentials common.Root) bool {
 	return withdrawal_credentials[0] == COMPOUNDING_WITHDRAWAL_PREFIX
 }
 
-// has_compounding_withdrawal_credential checks if validator has an 0x02 prefixed "compounding" withdrawal credential
-func has_compounding_withdrawal_credential(validator common.Validator) bool {
+// HasCompoundingWithdrawalCredential checks if validator has an 0x02 prefixed "compounding" withdrawal credential
+func HasCompoundingWithdrawalCredential(validator common.Validator) bool {
 	wc, err := validator.WithdrawalCredentials()
 	if err != nil {
 		return false
 	}
-	return is_compounding_withdrawal_credential(wc)
+	return IsCompoundingWithdrawalCredential(wc)
 }
 
-// has_execution_withdrawal_credential checks if validator has a 0x01 or 0x02 prefixed withdrawal credential
-func has_execution_withdrawal_credential(validator common.Validator) bool {
+// HasExecutionWithdrawalCredential checks if validator has a 0x01 or 0x02 prefixed withdrawal credential
+func HasExecutionWithdrawalCredential(validator common.Validator) bool {
 	wc, err := validator.WithdrawalCredentials()
 	if err != nil {
 		return false
 	}
 	// Check for ETH1_ADDRESS_WITHDRAWAL_PREFIX (0x01) or COMPOUNDING_WITHDRAWAL_PREFIX (0x02)
-	return wc[0] == common.ETH1_ADDRESS_WITHDRAWAL_PREFIX || has_compounding_withdrawal_credential(validator)
+	return wc[0] == common.ETH1_ADDRESS_WITHDRAWAL_PREFIX || HasCompoundingWithdrawalCredential(validator)
 }
 
-// get_max_effective_balance gets max effective balance for validator
-func get_max_effective_balance(spec *common.Spec, validator common.Validator) common.Gwei {
+// GetMaxEffectiveBalance gets max effective balance for validator
+func GetMaxEffectiveBalance(spec *common.Spec, validator common.Validator) common.Gwei {
 	// [Modified in Electra:EIP7251]
 	// For validators with compounding withdrawal credentials,
 	// the max effective balance is MAX_EFFECTIVE_BALANCE_ELECTRA (2048 ETH)
 	// For all other validators, it is MIN_ACTIVATION_BALANCE (32 ETH)
-	if has_compounding_withdrawal_credential(validator) {
+	if HasCompoundingWithdrawalCredential(validator) {
 		return spec.MAX_EFFECTIVE_BALANCE_ELECTRA
 	} else {
 		return spec.MIN_ACTIVATION_BALANCE
 	}
 }
 
-// get_pending_balance_to_withdraw returns the sum of pending withdrawals for a given validator index
-func get_pending_balance_to_withdraw(state *BeaconStateView, validatorIndex common.ValidatorIndex) (common.Gwei, error) {
+// GetPendingBalanceToWithdraw returns the sum of pending withdrawals for a given validator index
+func GetPendingBalanceToWithdraw(state *BeaconStateView, validatorIndex common.ValidatorIndex) (common.Gwei, error) {
 	partialWithdrawals, err := state.PendingPartialWithdrawals()
 	if err != nil {
 		return 0, err
@@ -99,8 +99,8 @@ func get_pending_balance_to_withdraw(state *BeaconStateView, validatorIndex comm
 	return pendingBalance, nil
 }
 
-// get_balance_churn_limit returns the churn limit for the current epoch
-func get_balance_churn_limit(spec *common.Spec, state *BeaconStateView) (common.Gwei, error) {
+// GetBalanceChurnLimit returns the churn limit for the current epoch
+func GetBalanceChurnLimit(spec *common.Spec, state *BeaconStateView) (common.Gwei, error) {
 	validators, err := state.Validators()
 	if err != nil {
 		return 0, err
@@ -146,14 +146,16 @@ func get_balance_churn_limit(spec *common.Spec, state *BeaconStateView) (common.
 	
 	churn := common.Gwei(uint64(totalActiveBalance) / uint64(spec.CHURN_LIMIT_QUOTIENT))
 	if churn < common.Gwei(spec.MIN_PER_EPOCH_CHURN_LIMIT_ELECTRA) {
-		return common.Gwei(spec.MIN_PER_EPOCH_CHURN_LIMIT_ELECTRA), nil
+		churn = common.Gwei(spec.MIN_PER_EPOCH_CHURN_LIMIT_ELECTRA)
 	}
+	// Round down to nearest EFFECTIVE_BALANCE_INCREMENT
+	churn = churn - churn%common.Gwei(spec.EFFECTIVE_BALANCE_INCREMENT)
 	return churn, nil
 }
 
-// get_activation_exit_churn_limit returns the activation/exit churn limit for the current epoch
-func get_activation_exit_churn_limit(spec *common.Spec, state *BeaconStateView) (common.Gwei, error) {
-	churn, err := get_balance_churn_limit(spec, state)
+// GetActivationExitChurnLimit returns the activation/exit churn limit for the current epoch
+func GetActivationExitChurnLimit(spec *common.Spec, state *BeaconStateView) (common.Gwei, error) {
+	churn, err := GetBalanceChurnLimit(spec, state)
 	if err != nil {
 		return 0, err
 	}
@@ -164,14 +166,14 @@ func get_activation_exit_churn_limit(spec *common.Spec, state *BeaconStateView) 
 	return churn, nil
 }
 
-// get_consolidation_churn_limit returns the consolidation churn limit for the current epoch
-func get_consolidation_churn_limit(spec *common.Spec, state *BeaconStateView) (common.Gwei, error) {
-	balanceChurn, err := get_balance_churn_limit(spec, state)
+// GetConsolidationChurnLimit returns the consolidation churn limit for the current epoch
+func GetConsolidationChurnLimit(spec *common.Spec, state *BeaconStateView) (common.Gwei, error) {
+	balanceChurn, err := GetBalanceChurnLimit(spec, state)
 	if err != nil {
 		return 0, err
 	}
 	
-	activationExitChurn, err := get_activation_exit_churn_limit(spec, state)
+	activationExitChurn, err := GetActivationExitChurnLimit(spec, state)
 	if err != nil {
 		return 0, err
 	}
@@ -234,7 +236,7 @@ func GetValidatorFromDeposit(spec *common.Spec, pubkey common.BLSPubkey, withdra
 	
 	// Calculate max effective balance based on withdrawal credentials
 	maxEffectiveBalance := spec.MIN_ACTIVATION_BALANCE
-	if is_compounding_withdrawal_credential(withdrawalCredentials) {
+	if IsCompoundingWithdrawalCredential(withdrawalCredentials) {
 		maxEffectiveBalance = spec.MAX_EFFECTIVE_BALANCE_ELECTRA
 	}
 	

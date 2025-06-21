@@ -8,7 +8,7 @@ clean:
 create-test-dir:
 	mkdir -p $(TEST_OUT_DIR)
 
-SPEC_VERSION ?= v1.5.0-beta.2
+SPEC_VERSION ?= v1.6.0-alpha.2-hotfix.0
 
 clear-tests:
 	rm -rf tests/spec/eth2.0-spec-tests

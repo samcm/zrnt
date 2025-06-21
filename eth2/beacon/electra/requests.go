@@ -131,8 +131,24 @@ func ProcessDepositRequest(ctx context.Context, spec *common.Spec, epc *common.E
 		Slot:                  slot,
 	}
 
-	// For simplicity, just append to existing deposits
-	// In production, would need to handle limit properly
+	// Check if we can add more pending deposits without exceeding the limit
+	pendingDeposits, err := state.PendingDeposits()
+	if err != nil {
+		return err
+	}
+	
+	currentCount, err := pendingDeposits.Length()
+	if err != nil {
+		return err
+	}
+	
+	// Check against PENDING_DEPOSITS_LIMIT to prevent exceeding the maximum
+	if currentCount >= uint64(spec.PENDING_DEPOSITS_LIMIT) {
+		// Silently skip if limit is reached, as per consensus spec behavior
+		// This follows the same pattern as other limits in the beacon chain
+		return nil
+	}
+	
 	return state.AppendPendingDeposit(pendingDeposit)
 }
 
@@ -238,7 +254,7 @@ func ProcessWithdrawalRequest(ctx context.Context, spec *common.Spec, epc *commo
 		return nil
 	}
 
-	pendingBalanceToWithdraw, err := get_pending_balance_to_withdraw(state, validatorIndex)
+	pendingBalanceToWithdraw, err := GetPendingBalanceToWithdraw(state, validatorIndex)
 	if err != nil {
 		return err
 	}
@@ -358,7 +374,7 @@ func ProcessConsolidationRequest(ctx context.Context, spec *common.Spec, epc *co
 	}
 
 	// Check consolidation churn limit
-	consolidationChurnLimit, err := get_consolidation_churn_limit(spec, state)
+	consolidationChurnLimit, err := GetConsolidationChurnLimit(spec, state)
 	if err != nil {
 		return err
 	}
@@ -481,7 +497,7 @@ func ProcessConsolidationRequest(ctx context.Context, spec *common.Spec, epc *co
 	}
 
 	// Verify source has no pending withdrawals
-	sourcePendingBalance, err := get_pending_balance_to_withdraw(state, sourceIndex)
+	sourcePendingBalance, err := GetPendingBalanceToWithdraw(state, sourceIndex)
 	if err != nil {
 		return err
 	}
@@ -572,11 +588,15 @@ func SwitchToCompoundingValidator(ctx context.Context, spec *common.Spec, state 
 		}
 
 		// Queue excess balance as pending deposit
+		// Create G2_POINT_AT_INFINITY signature as per spec
+		var g2PointAtInfinity common.BLSSignature
+		g2PointAtInfinity[0] = 0xc0 // G2_POINT_AT_INFINITY = BLSSignature(b'\xc0' + b'\x00' * 95)
+		
 		pendingDeposit := common.PendingDeposit{
 			Pubkey: common.BLSPubkey{}, // Will be set below
 			WithdrawalCredentials: newWithdrawalCredentials,
 			Amount: excessBalance,
-			Signature: common.BLSSignature{}, // All zeros for test compatibility
+			Signature: g2PointAtInfinity,
 			Slot: common.GENESIS_SLOT,
 		}
 

@@ -11,6 +11,7 @@ import (
 	"github.com/protolambda/zrnt/eth2/beacon/capella"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
 	"github.com/protolambda/zrnt/eth2/beacon/deneb"
+	"github.com/protolambda/zrnt/eth2/beacon/electra"
 	"github.com/protolambda/zrnt/tests/spec/test_util"
 )
 
@@ -46,9 +47,18 @@ func (m *MockExecEngine) BellatrixIsValidBlockHash(ctx context.Context, payload 
 	return m.Valid, nil
 }
 
+func (m *MockExecEngine) IsValidBlockHash(executionPayload *deneb.ExecutionPayload, parentBeaconBlockRoot common.Root, executionRequestsList [][]byte) (bool, error) {
+	return m.Valid, nil
+}
+
+func (m *MockExecEngine) NotifyNewPayload(executionPayload *deneb.ExecutionPayload, parentBeaconBlockRoot common.Root, executionRequestsList [][]byte) (bool, error) {
+	return m.Valid, nil
+}
+
 var _ bellatrix.ExecutionEngine = (*MockExecEngine)(nil)
 var _ capella.ExecutionEngine = (*MockExecEngine)(nil)
 var _ deneb.ExecutionEngine = (*MockExecEngine)(nil)
+var _ electra.ExecutionEngine = (*MockExecEngine)(nil)
 
 func (m *MockExecEngine) ExecutePayload(ctx context.Context, executionPayload interface{}) (valid bool, err error) {
 	return m.Valid, nil
@@ -71,6 +81,8 @@ func (c *ExecutionPayloadTestCase) Load(t *testing.T, forkName test_util.ForkNam
 		c.BlockBody = new(capella.BeaconBlockBody)
 	case "deneb":
 		c.BlockBody = new(deneb.BeaconBlockBody)
+	case "electra":
+		c.BlockBody = new(electra.BeaconBlockBody)
 	}
 	test_util.LoadSSZ(t, "body", c.Spec.Wrap(c.BlockBody), readPart)
 	part := readPart.Part("execution.yaml")
@@ -81,6 +93,9 @@ func (c *ExecutionPayloadTestCase) Load(t *testing.T, forkName test_util.ForkNam
 
 func (c *ExecutionPayloadTestCase) Run() error {
 	switch s := c.Pre.(type) {
+	case *electra.BeaconStateView:
+		return electra.ProcessExecutionPayload(context.Background(), c.Spec,
+			s, c.BlockBody.(*electra.BeaconBlockBody), &c.Execution)
 	case bellatrix.ExecutionTrackingBeaconState:
 		return bellatrix.ProcessExecutionPayload(context.Background(), c.Spec,
 			s, &c.BlockBody.(*bellatrix.BeaconBlockBody).ExecutionPayload, &c.Execution)
@@ -96,6 +111,6 @@ func (c *ExecutionPayloadTestCase) Run() error {
 }
 
 func TestExecutionPayload(t *testing.T) {
-	test_util.RunTransitionTest(t, []test_util.ForkName{"bellatrix", "capella", "deneb"}, "operations", "execution_payload",
+	test_util.RunTransitionTest(t, []test_util.ForkName{"bellatrix", "capella", "deneb", "electra"}, "operations", "execution_payload",
 		func() test_util.TransitionTest { return new(ExecutionPayloadTestCase) })
 }

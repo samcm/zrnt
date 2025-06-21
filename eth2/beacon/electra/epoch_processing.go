@@ -90,7 +90,7 @@ func ProcessPendingDeposits(ctx context.Context, spec *common.Spec, epc *common.
 		return err
 	}
 
-	churnLimit, err := get_activation_exit_churn_limit(spec, state)
+	churnLimit, err := GetActivationExitChurnLimit(spec, state)
 	if err != nil {
 		return err
 	}
@@ -580,7 +580,7 @@ func ProcessEffectiveBalanceUpdates(ctx context.Context, spec *common.Spec, epc 
 			
 			// [Modified in Electra:EIP7251]
 			// Get the appropriate cap for this validator
-			maxEffectiveBalance := get_max_effective_balance(spec, val)
+			maxEffectiveBalance := GetMaxEffectiveBalance(spec, val)
 			
 			// Cap the new effective balance
 			if newEffectiveBalance > maxEffectiveBalance {
@@ -622,7 +622,7 @@ func ProcessRegistryUpdates(ctx context.Context, spec *common.Spec, epc *common.
 		}
 
 		// Check activation eligibility
-		if isEligible, err := is_eligible_for_activation_queue(val, spec); err != nil {
+		if isEligible, err := isEligibleForActivationQueue(val, spec); err != nil {
 			return err
 		} else if isEligible {
 			if err := val.SetActivationEligibilityEpoch(currentEpoch + 1); err != nil {

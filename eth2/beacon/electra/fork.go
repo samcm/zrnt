@@ -2,12 +2,71 @@ package electra
 
 import (
 	"bytes"
+	"sort"
 
 	"github.com/protolambda/ztyp/codec"
 	. "github.com/protolambda/ztyp/view"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
 	"github.com/protolambda/zrnt/eth2/beacon/deneb"
 )
+
+// QueueExcessActiveBalance queues excess active balance for validators with compounding credentials
+func QueueExcessActiveBalance(spec *common.Spec, state *BeaconStateView, index common.ValidatorIndex) error {
+	balances, err := state.Balances()
+	if err != nil {
+		return err
+	}
+	
+	balance, err := balances.GetBalance(index)
+	if err != nil {
+		return err
+	}
+	
+	if balance > spec.MIN_ACTIVATION_BALANCE {
+		excessBalance := balance - spec.MIN_ACTIVATION_BALANCE
+		
+		// Set balance to MIN_ACTIVATION_BALANCE
+		if err := balances.SetBalance(index, spec.MIN_ACTIVATION_BALANCE); err != nil {
+			return err
+		}
+		
+		validators, err := state.Validators()
+		if err != nil {
+			return err
+		}
+		
+		validator, err := validators.Validator(index)
+		if err != nil {
+			return err
+		}
+		
+		pubkey, err := validator.Pubkey()
+		if err != nil {
+			return err
+		}
+		
+		withdrawalCredentials, err := validator.WithdrawalCredentials()
+		if err != nil {
+			return err
+		}
+		
+		// Create G2_POINT_AT_INFINITY signature
+		var g2PointAtInfinity common.BLSSignature
+		g2PointAtInfinity[0] = 0xc0 // G2_POINT_AT_INFINITY = BLSSignature(b'\xc0' + b'\x00' * 95)
+		
+		pendingDeposit := common.PendingDeposit{
+			Pubkey: pubkey,
+			WithdrawalCredentials: withdrawalCredentials,
+			Amount: excessBalance,
+			Signature: g2PointAtInfinity,
+			Slot: common.GENESIS_SLOT,
+		}
+		
+		return state.AppendPendingDeposit(pendingDeposit)
+	}
+	
+	return nil
+}
 
 func UpgradeToElectra(spec *common.Spec, epc *common.EpochsContext, pre *deneb.BeaconStateView) (*BeaconStateView, error) {
 	// Get epoch
@@ -17,28 +76,9 @@ func UpgradeToElectra(spec *common.Spec, epc *common.EpochsContext, pre *deneb.B
 	}
 	epoch := spec.SlotToEpoch(preSlot)
 
-	// Create new Electra state
-	post := NewBeaconStateView(spec)
-
-	// Copy all fields from Deneb state
-	// Versioning
-	genesisTime, err := pre.GenesisTime()
+	// Copy all other fields from pre state
+	rawPre, err := pre.Raw(spec)
 	if err != nil {
-		return nil, err
-	}
-	if err := post.SetGenesisTime(genesisTime); err != nil {
-		return nil, err
-	}
-
-	genesisValidatorsRoot, err := pre.GenesisValidatorsRoot()
-	if err != nil {
-		return nil, err
-	}
-	if err := post.SetGenesisValidatorsRoot(genesisValidatorsRoot); err != nil {
-		return nil, err
-	}
-
-	if err := post.SetSlot(preSlot); err != nil {
 		return nil, err
 	}
 
@@ -48,17 +88,16 @@ func UpgradeToElectra(spec *common.Spec, epc *common.EpochsContext, pre *deneb.B
 		CurrentVersion:  spec.ELECTRA_FORK_VERSION,
 		Epoch:           epoch,
 	}
-	if err := post.SetFork(newFork); err != nil {
-		return nil, err
-	}
 
-	// Copy all other fields from pre state
-	// This is simplified - in production, all fields need to be copied
-	// For now, we'll copy the raw state and update the new fields
-	rawPre, err := pre.Raw(spec)
-	if err != nil {
-		return nil, err
+	// Calculate earliest exit epoch
+	earliestExitEpoch := spec.ComputeActivationExitEpoch(epoch)
+	// Check for any validators with exit epochs and find the maximum
+	for _, validator := range rawPre.Validators {
+		if validator.ExitEpoch != common.FAR_FUTURE_EPOCH && validator.ExitEpoch > earliestExitEpoch {
+			earliestExitEpoch = validator.ExitEpoch
+		}
 	}
+	earliestExitEpoch += 1
 
 	// Create raw post state from pre state fields
 	rawPost := &BeaconState{
@@ -95,9 +134,9 @@ func UpgradeToElectra(spec *common.Spec, epc *common.EpochsContext, pre *deneb.B
 		DepositRequestsStartIndex:     Uint64View(UNSET_DEPOSIT_REQUESTS_START_INDEX),
 		DepositBalanceToConsume:       0,
 		ExitBalanceToConsume:          0,
-		EarliestExitEpoch:             epoch,
+		EarliestExitEpoch:             earliestExitEpoch,
 		ConsolidationBalanceToConsume: 0,
-		EarliestConsolidationEpoch:    epoch,
+		EarliestConsolidationEpoch:    spec.ComputeActivationExitEpoch(epoch),
 		PendingDeposits:               make(common.PendingDeposits, 0),
 		PendingPartialWithdrawals:     make(common.PendingPartialWithdrawals, 0),
 		PendingConsolidations:         make(common.PendingConsolidations, 0),
@@ -109,5 +148,144 @@ func UpgradeToElectra(spec *common.Spec, epc *common.EpochsContext, pre *deneb.B
 		return nil, err
 	}
 
-	return AsBeaconStateView(BeaconStateType(spec).Deserialize(codec.NewDecodingReader(bytes.NewReader(buf.Bytes()), uint64(len(buf.Bytes())))))
+	postView, err := AsBeaconStateView(BeaconStateType(spec).Deserialize(codec.NewDecodingReader(bytes.NewReader(buf.Bytes()), uint64(len(buf.Bytes())))))
+	if err != nil {
+		return nil, err
+	}
+
+	// Process pre-activation validators and compounding credentials
+	validators, err := postView.Validators()
+	if err != nil {
+		return nil, err
+	}
+
+	balances, err := postView.Balances()
+	if err != nil {
+		return nil, err
+	}
+
+	length, err := validators.ValidatorCount()
+	if err != nil {
+		return nil, err
+	}
+
+	// Add validators that are not yet active to pending balance deposits
+	var preActivation []common.ValidatorIndex
+	for i := common.ValidatorIndex(0); uint64(i) < length; i++ {
+		validator, err := validators.Validator(i)
+		if err != nil {
+			return nil, err
+		}
+		
+		activationEpoch, err := validator.ActivationEpoch()
+		if err != nil {
+			return nil, err
+		}
+		
+		if activationEpoch == common.FAR_FUTURE_EPOCH {
+			preActivation = append(preActivation, i)
+		}
+	}
+
+	// Sort by activation eligibility epoch, then by index
+	sort.Slice(preActivation, func(i, j int) bool {
+		valI, _ := validators.Validator(preActivation[i])
+		valJ, _ := validators.Validator(preActivation[j])
+		
+		eligI, _ := valI.ActivationEligibilityEpoch()
+		eligJ, _ := valJ.ActivationEligibilityEpoch()
+		
+		if eligI != eligJ {
+			return eligI < eligJ
+		}
+		return preActivation[i] < preActivation[j]
+	})
+
+	// Process pre-activation validators
+	for _, index := range preActivation {
+		balance, err := balances.GetBalance(index)
+		if err != nil {
+			return nil, err
+		}
+		
+		// Set balance to 0
+		if err := balances.SetBalance(index, 0); err != nil {
+			return nil, err
+		}
+		
+		validator, err := validators.Validator(index)
+		if err != nil {
+			return nil, err
+		}
+		
+		// Set effective balance to 0
+		if err := validator.SetEffectiveBalance(0); err != nil {
+			return nil, err
+		}
+		
+		// Set activation eligibility epoch to FAR_FUTURE_EPOCH
+		if err := validator.SetActivationEligibilityEpoch(common.FAR_FUTURE_EPOCH); err != nil {
+			return nil, err
+		}
+		
+		// Get validator details for pending deposit
+		pubkey, err := validator.Pubkey()
+		if err != nil {
+			return nil, err
+		}
+		
+		withdrawalCredentials, err := validator.WithdrawalCredentials()
+		if err != nil {
+			return nil, err
+		}
+		
+		// Create G2_POINT_AT_INFINITY signature
+		var g2PointAtInfinity common.BLSSignature
+		g2PointAtInfinity[0] = 0xc0
+		
+		pendingDeposit := common.PendingDeposit{
+			Pubkey: pubkey,
+			WithdrawalCredentials: withdrawalCredentials,
+			Amount: balance,
+			Signature: g2PointAtInfinity,
+			Slot: common.GENESIS_SLOT,
+		}
+		
+		if err := postView.AppendPendingDeposit(pendingDeposit); err != nil {
+			return nil, err
+		}
+	}
+
+	// Ensure early adopters of compounding credentials go through the activation churn
+	for i := common.ValidatorIndex(0); uint64(i) < length; i++ {
+		validator, err := validators.Validator(i)
+		if err != nil {
+			return nil, err
+		}
+		
+		if HasCompoundingWithdrawalCredential(validator) {
+			if err := QueueExcessActiveBalance(spec, postView, i); err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	// Calculate and set the churn limits after processing validators
+	exitBalanceToConsume, err := GetActivationExitChurnLimit(spec, postView)
+	if err != nil {
+		return nil, err
+	}
+	if err := postView.SetExitBalanceToConsume(exitBalanceToConsume); err != nil {
+		return nil, err
+	}
+
+	consolidationBalanceToConsume, err := GetConsolidationChurnLimit(spec, postView)
+	if err != nil {
+		return nil, err
+	}
+	if err := postView.SetConsolidationBalanceToConsume(consolidationBalanceToConsume); err != nil {
+		return nil, err
+	}
+
+	return postView, nil
 }

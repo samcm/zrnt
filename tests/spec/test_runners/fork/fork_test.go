@@ -6,6 +6,7 @@ import (
 
 	"github.com/protolambda/zrnt/eth2/beacon/capella"
 	"github.com/protolambda/zrnt/eth2/beacon/deneb"
+	"github.com/protolambda/zrnt/eth2/beacon/electra"
 
 	"gopkg.in/yaml.v3"
 
@@ -47,6 +48,8 @@ func (c *ForkTestCase) Load(t *testing.T, forkName test_util.ForkName, readPart 
 		preFork = "bellatrix"
 	case "deneb":
 		preFork = "capella"
+	case "electra":
+		preFork = "deneb"
 	default:
 		t.Fatalf("unrecognized fork: %s", c.PostFork)
 		return
@@ -93,6 +96,12 @@ func (c *ForkTestCase) Run() error {
 			return err
 		}
 		c.Pre = out
+	case "electra":
+		out, err := electra.UpgradeToElectra(c.Spec, epc, c.Pre.(*deneb.BeaconStateView))
+		if err != nil {
+			return err
+		}
+		c.Pre = out
 	default:
 		return fmt.Errorf("unrecognized fork: %s", c.PostFork)
 	}
@@ -114,6 +123,6 @@ func (c *ForkTestCase) Check(t *testing.T) {
 }
 
 func TestFork(t *testing.T) {
-	test_util.RunTransitionTest(t, []test_util.ForkName{"altair", "bellatrix", "capella", "deneb"}, "fork", "fork",
+	test_util.RunTransitionTest(t, []test_util.ForkName{"altair", "bellatrix", "capella", "deneb", "electra"}, "fork", "fork",
 		func() test_util.TransitionTest { return new(ForkTestCase) })
 }

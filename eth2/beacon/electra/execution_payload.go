@@ -117,13 +117,6 @@ func VerifyAndNotifyNewPayload(ctx context.Context, engine ExecutionEngine, requ
 	}
 
 	executionPayload := request.ExecutionPayload
-	
-	// Check for empty transactions
-	for _, tx := range executionPayload.Transactions {
-		if len(tx) == 0 {
-			return false, errors.New("execution payload contains empty transaction")
-		}
-	}
 
 	// Get execution requests list
 	executionRequestsList, err := GetExecutionRequestsList(nil, request.ExecutionRequests)

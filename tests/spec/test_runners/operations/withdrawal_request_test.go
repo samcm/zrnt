@@ -16,7 +16,7 @@ type WithdrawalRequestTestCase struct {
 
 func (c *WithdrawalRequestTestCase) Load(t *testing.T, forkName test_util.ForkName, readPart test_util.TestPartReader) {
 	c.BaseTransitionTest.Load(t, forkName, readPart)
-	test_util.LoadSSZ(t, "execution_layer_withdrawal_request", &c.ExecutionLayerWithdrawalRequest, readPart)
+	test_util.LoadSSZ(t, "withdrawal_request", &c.ExecutionLayerWithdrawalRequest, readPart)
 }
 
 func (c *WithdrawalRequestTestCase) Run() error {

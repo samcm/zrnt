@@ -8,9 +8,9 @@ import (
 	"github.com/protolambda/zrnt/eth2/beacon/phase0"
 )
 
-// compute_exit_epoch_and_update_churn computes the exit epoch and updates churn
+// computeExitEpochAndUpdateChurn computes the exit epoch and updates churn
 // [Modified in Electra:EIP7251]
-func compute_exit_epoch_and_update_churn(state *BeaconStateView, exit_balance common.Gwei, spec *common.Spec) (common.Epoch, error) {
+func computeExitEpochAndUpdateChurn(state *BeaconStateView, exit_balance common.Gwei, spec *common.Spec) (common.Epoch, error) {
 	slot, err := state.Slot()
 	if err != nil {
 		return 0, err
@@ -30,24 +30,27 @@ func compute_exit_epoch_and_update_churn(state *BeaconStateView, exit_balance co
 	}
 
 	// Get per epoch churn
-	per_epoch_churn, err := get_activation_exit_churn_limit(spec, state)
+	per_epoch_churn, err := GetActivationExitChurnLimit(spec, state)
 	if err != nil {
 		return 0, err
 	}
 
-	// New epoch for exits
-	exit_balance_to_consume, err := state.ExitBalanceToConsume()
-	if err != nil {
-		return 0, err
-	}
-
+	// Get current state values
 	state_earliest_exit_epoch, err := state.EarliestExitEpoch()
 	if err != nil {
 		return 0, err
 	}
 
+	// New epoch for exits
+	var exit_balance_to_consume common.Gwei
 	if state_earliest_exit_epoch < earliest_exit_epoch {
 		exit_balance_to_consume = per_epoch_churn
+	} else {
+		// Use existing balance to consume
+		exit_balance_to_consume, err = state.ExitBalanceToConsume()
+		if err != nil {
+			return 0, err
+		}
 	}
 
 	// Exit doesn't fit in the current earliest epoch
@@ -69,9 +72,9 @@ func compute_exit_epoch_and_update_churn(state *BeaconStateView, exit_balance co
 	return earliest_exit_epoch, nil
 }
 
-// compute_consolidation_epoch_and_update_churn computes the consolidation epoch and updates churn
+// computeConsolidationEpochAndUpdateChurn computes the consolidation epoch and updates churn
 // [New in Electra:EIP7251]
-func compute_consolidation_epoch_and_update_churn(state *BeaconStateView, consolidation_balance common.Gwei, spec *common.Spec) (common.Epoch, error) {
+func computeConsolidationEpochAndUpdateChurn(state *BeaconStateView, consolidation_balance common.Gwei, spec *common.Spec) (common.Epoch, error) {
 	slot, err := state.Slot()
 	if err != nil {
 		return 0, err
@@ -91,7 +94,7 @@ func compute_consolidation_epoch_and_update_churn(state *BeaconStateView, consol
 	}
 
 	// Get per epoch consolidation churn
-	per_epoch_consolidation_churn, err := get_consolidation_churn_limit(spec, state)
+	per_epoch_consolidation_churn, err := GetConsolidationChurnLimit(spec, state)
 	if err != nil {
 		return 0, err
 	}
@@ -130,9 +133,9 @@ func compute_consolidation_epoch_and_update_churn(state *BeaconStateView, consol
 	return earliest_consolidation_epoch, nil
 }
 
-// initiate_validator_exit initiates the validator exit process
+// initiateValidatorExit initiates the validator exit process
 // [Modified in Electra:EIP7251]
-func initiate_validator_exit(state *BeaconStateView, index common.ValidatorIndex, spec *common.Spec, epc *common.EpochsContext) error {
+func initiateValidatorExit(state *BeaconStateView, index common.ValidatorIndex, spec *common.Spec, epc *common.EpochsContext) error {
 	// Return if validator already initiated exit
 	validators, err := state.Validators()
 	if err != nil {
@@ -181,7 +184,7 @@ func initiate_validator_exit(state *BeaconStateView, index common.ValidatorIndex
 	}
 
 	// Compute exit epoch
-	exit_queue_epoch, err := compute_exit_epoch_and_update_churn(state, exit_balance, spec)
+	exit_queue_epoch, err := computeExitEpochAndUpdateChurn(state, exit_balance, spec)
 	if err != nil {
 		return err
 	}
@@ -202,9 +205,9 @@ func initiate_validator_exit(state *BeaconStateView, index common.ValidatorIndex
 	return nil
 }
 
-// is_eligible_for_activation_queue checks if a validator is eligible for the activation queue
+// isEligibleForActivationQueue checks if a validator is eligible for the activation queue
 // [Modified in Electra:EIP7251]
-func is_eligible_for_activation_queue(validator common.Validator, spec *common.Spec) (bool, error) {
+func isEligibleForActivationQueue(validator common.Validator, spec *common.Spec) (bool, error) {
 	activation_eligibility_epoch, err := validator.ActivationEligibilityEpoch()
 	if err != nil {
 		return false, err
@@ -224,9 +227,9 @@ func is_eligible_for_activation_queue(validator common.Validator, spec *common.S
 	return effective_balance >= spec.MIN_ACTIVATION_BALANCE, nil
 }
 
-// is_eligible_for_activation checks if a validator is eligible for activation
+// isEligibleForActivation checks if a validator is eligible for activation
 // [Modified in Electra:EIP7251]
-func is_eligible_for_activation(state common.BeaconState, validator common.Validator, spec *common.Spec) (bool, error) {
+func isEligibleForActivation(state common.BeaconState, validator common.Validator, spec *common.Spec) (bool, error) {
 	activation_eligibility_epoch, err := validator.ActivationEligibilityEpoch()
 	if err != nil {
 		return false, err
@@ -260,7 +263,7 @@ func ComputeExitEpochAndUpdateChurn(ctx context.Context, spec *common.Spec, stat
 	if err := ctx.Err(); err != nil {
 		return 0, err
 	}
-	return compute_exit_epoch_and_update_churn(state, exitBalance, spec)
+	return computeExitEpochAndUpdateChurn(state, exitBalance, spec)
 }
 
 // ComputeConsolidationEpochAndUpdateChurn computes the consolidation epoch and updates churn
@@ -268,7 +271,7 @@ func ComputeConsolidationEpochAndUpdateChurn(ctx context.Context, spec *common.S
 	if err := ctx.Err(); err != nil {
 		return 0, err
 	}
-	return compute_consolidation_epoch_and_update_churn(state, consolidationBalance, spec)
+	return computeConsolidationEpochAndUpdateChurn(state, consolidationBalance, spec)
 }
 
 // InitiateValidatorExit initiates the validator exit process
@@ -276,11 +279,11 @@ func InitiateValidatorExit(ctx context.Context, spec *common.Spec, epc *common.E
 	if err := ctx.Err(); err != nil {
 		return err
 	}
-	return initiate_validator_exit(state, index, spec, epc)
+	return initiateValidatorExit(state, index, spec, epc)
 }
 
 
 // IsEligibleForActivation checks if a validator is eligible for activation
 func IsEligibleForActivation(state common.BeaconState, validator common.Validator, spec *common.Spec) (bool, error) {
-	return is_eligible_for_activation(state, validator, spec)
+	return isEligibleForActivation(state, validator, spec)
 }

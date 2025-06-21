@@ -686,7 +686,7 @@ func ProcessVoluntaryExit(ctx context.Context, spec *common.Spec, epc *common.Ep
 	}
 
 	// [New in Electra:EIP7251] Check pending withdrawals
-	pendingBalance, err := get_pending_balance_to_withdraw(state.(*BeaconStateView), exit.ValidatorIndex)
+	pendingBalance, err := GetPendingBalanceToWithdraw(state.(*BeaconStateView), exit.ValidatorIndex)
 	if err != nil {
 		return err
 	}

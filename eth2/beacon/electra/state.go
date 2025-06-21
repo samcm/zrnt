@@ -812,10 +812,3 @@ func (state *BeaconStateView) Raw(spec *common.Spec) (*BeaconState, error) {
 func (state *BeaconStateView) CopyState() (common.BeaconState, error) {
 	return AsBeaconStateView(state.ContainerView.Copy())
 }
-
-type ExecutionTrackingBeaconState interface {
-	common.BeaconState
-
-	LatestExecutionPayloadHeader() (*deneb.ExecutionPayloadHeaderView, error)
-	SetLatestExecutionPayloadHeader(h *deneb.ExecutionPayloadHeader) error
-}
