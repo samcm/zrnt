@@ -6,6 +6,7 @@ import (
 
 	"github.com/protolambda/zrnt/eth2/beacon/capella"
 	"github.com/protolambda/zrnt/eth2/beacon/deneb"
+	"github.com/protolambda/zrnt/eth2/beacon/electra"
 
 	"github.com/protolambda/zrnt/eth2/beacon/altair"
 	"github.com/protolambda/zrnt/eth2/beacon/bellatrix"
@@ -40,6 +41,10 @@ func (c *BlockHeaderTestCase) Load(t *testing.T, forkName test_util.ForkName, re
 		c.Header = block.Header(c.Spec)
 	case "deneb":
 		var block deneb.BeaconBlock
+		test_util.LoadSpecObj(t, "block", &block, readPart)
+		c.Header = block.Header(c.Spec)
+	case "electra":
+		var block electra.BeaconBlock
 		test_util.LoadSpecObj(t, "block", &block, readPart)
 		c.Header = block.Header(c.Spec)
 	default:

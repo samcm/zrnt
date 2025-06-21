@@ -334,10 +334,7 @@ func ProcessConsolidationRequest(ctx context.Context, spec *common.Spec, epc *co
 
 		if validatorIndex != common.ValidatorIndexMarker {
 			// Switch to compounding withdrawal credentials
-			// In production this would call the helper function from helpers.go
-			// For now, we skip this step as the function is complex
-			// TODO: Implement proper validator credential switching
-			return nil
+			return SwitchToCompoundingValidator(ctx, spec, state, validatorIndex)
 		}
 		return nil
 	}
@@ -519,17 +516,87 @@ func ProcessConsolidationRequest(ctx context.Context, spec *common.Spec, epc *co
 	}
 
 	// Add to pending consolidations
-	_ = common.PendingConsolidation{
+	pendingConsolidation := common.PendingConsolidation{
 		SourceIndex: sourceIndex,
 		TargetIndex: targetIndex,
 	}
 
-	// For simplicity, skip modifying list - in production would properly handle this
-	return nil
+	return state.AppendPendingConsolidation(pendingConsolidation)
 }
 
 
 // IsValidSwitchToCompoundingRequest checks if a consolidation request is a valid switch to compounding
+// SwitchToCompoundingValidator switches a validator to compounding withdrawal credentials
+func SwitchToCompoundingValidator(ctx context.Context, spec *common.Spec, state *BeaconStateView, validatorIndex common.ValidatorIndex) error {
+	validators, err := state.Validators()
+	if err != nil {
+		return err
+	}
+
+	validator, err := validators.Validator(validatorIndex)
+	if err != nil {
+		return err
+	}
+
+	// Get current withdrawal credentials
+	withdrawalCredentials, err := validator.WithdrawalCredentials()
+	if err != nil {
+		return err
+	}
+
+	// Update withdrawal credentials to compounding prefix
+	var newWithdrawalCredentials common.Hash32
+	newWithdrawalCredentials[0] = COMPOUNDING_WITHDRAWAL_PREFIX
+	copy(newWithdrawalCredentials[1:], withdrawalCredentials[1:])
+
+	if err := validator.SetWithdrawalCredentials(newWithdrawalCredentials); err != nil {
+		return err
+	}
+
+	// Queue excess balance if any
+	balances, err := state.Balances()
+	if err != nil {
+		return err
+	}
+
+	balance, err := balances.GetBalance(validatorIndex)
+	if err != nil {
+		return err
+	}
+
+	if balance > spec.MIN_ACTIVATION_BALANCE {
+		excessBalance := balance - spec.MIN_ACTIVATION_BALANCE
+		
+		// Set balance to MIN_ACTIVATION_BALANCE
+		if err := balances.SetBalance(validatorIndex, spec.MIN_ACTIVATION_BALANCE); err != nil {
+			return err
+		}
+
+		// Queue excess balance as pending deposit
+		pendingDeposit := common.PendingDeposit{
+			Pubkey: common.BLSPubkey{}, // Will be set below
+			WithdrawalCredentials: newWithdrawalCredentials,
+			Amount: excessBalance,
+			Signature: common.BLSSignature{}, // All zeros for test compatibility
+			Slot: common.GENESIS_SLOT,
+		}
+
+		// Get validator pubkey
+		pubkey, err := validator.Pubkey()
+		if err != nil {
+			return err
+		}
+		pendingDeposit.Pubkey = pubkey
+
+		// Append pending deposit
+		if err := state.AppendPendingDeposit(pendingDeposit); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func IsValidSwitchToCompoundingRequest(spec *common.Spec, state common.BeaconState, consolidationRequest *common.ConsolidationRequest) bool {
 	// Switch to compounding requires source and target be equal
 	if consolidationRequest.SourcePubkey != consolidationRequest.TargetPubkey {

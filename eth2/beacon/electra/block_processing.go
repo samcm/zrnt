@@ -738,7 +738,12 @@ func SlashValidator(spec *common.Spec, epc *common.EpochsContext, state common.B
 	}
 	epoch := spec.SlotToEpoch(slot)
 
-	if err := phase0.InitiateValidatorExit(spec, epc, state, slashedIndex); err != nil {
+	// Use Electra-specific exit function that updates EarliestExitEpoch
+	electraState, ok := state.(*BeaconStateView)
+	if !ok {
+		return fmt.Errorf("expected Electra state for SlashValidator")
+	}
+	if err := InitiateValidatorExit(context.Background(), spec, epc, electraState, slashedIndex); err != nil {
 		return err
 	}
 

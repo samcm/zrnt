@@ -740,6 +740,26 @@ func (state *BeaconStateView) AppendPendingDeposit(deposit common.PendingDeposit
 	return pendingDeposits.Append(container)
 }
 
+func (state *BeaconStateView) AppendPendingConsolidation(consolidation common.PendingConsolidation) error {
+	pendingConsolidations, err := state.PendingConsolidations()
+	if err != nil {
+		return err
+	}
+	// Create a container for the consolidation and append it
+	consolidationContainer := ContainerType("PendingConsolidation", []FieldDef{
+		{Name: "source_index", Type: common.ValidatorIndexType},
+		{Name: "target_index", Type: common.ValidatorIndexType},
+	})
+	container := consolidationContainer.New()
+	if err := container.Set(0, Uint64View(consolidation.SourceIndex)); err != nil {
+		return err
+	}
+	if err := container.Set(1, Uint64View(consolidation.TargetIndex)); err != nil {
+		return err
+	}
+	return pendingConsolidations.Append(container)
+}
+
 func (state *BeaconStateView) ForkSettings(spec *common.Spec) *common.ForkSettings {
 	return &common.ForkSettings{
 		MinSlashingPenaltyQuotient:     uint64(spec.MIN_SLASHING_PENALTY_QUOTIENT_BELLATRIX),

@@ -166,7 +166,21 @@ func get_activation_exit_churn_limit(spec *common.Spec, state *BeaconStateView) 
 
 // get_consolidation_churn_limit returns the consolidation churn limit for the current epoch
 func get_consolidation_churn_limit(spec *common.Spec, state *BeaconStateView) (common.Gwei, error) {
-	return get_balance_churn_limit(spec, state)
+	balanceChurn, err := get_balance_churn_limit(spec, state)
+	if err != nil {
+		return 0, err
+	}
+	
+	activationExitChurn, err := get_activation_exit_churn_limit(spec, state)
+	if err != nil {
+		return 0, err
+	}
+	
+	// Consolidation churn is the balance churn minus activation/exit churn
+	if balanceChurn > activationExitChurn {
+		return balanceChurn - activationExitChurn, nil
+	}
+	return 0, nil
 }
 
 // IsValidDepositSignature verifies a deposit signature
