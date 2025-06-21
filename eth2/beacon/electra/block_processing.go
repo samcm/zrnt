@@ -1024,7 +1024,8 @@ func GetAttestationParticipationFlagIndices(spec *common.Spec, state common.Beac
 	if isMatchingSource && inclusionDelay <= common.Slot(math.IntegerSquareroot(uint64(spec.SLOTS_PER_EPOCH))) {
 		out |= altair.TIMELY_SOURCE_FLAG
 	}
-	if isMatchingTarget && inclusionDelay <= spec.SLOTS_PER_EPOCH {
+	// [Modified in Deneb:EIP-7045] Target flag no longer has inclusion delay requirement
+	if isMatchingTarget {
 		out |= altair.TIMELY_TARGET_FLAG
 	}
 	if isMatchingHead && inclusionDelay == spec.MIN_ATTESTATION_INCLUSION_DELAY {
