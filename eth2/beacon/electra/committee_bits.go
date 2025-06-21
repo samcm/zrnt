@@ -58,6 +58,11 @@ func (li CommitteeBits) String() string {
 	return conv.BytesString(li[:])
 }
 
+// BitLen returns the number of bits in the committee bits
+func (cb CommitteeBits) BitLen() int {
+	return len(cb) * 8
+}
+
 func (li CommitteeBits) GetBit(i uint64) bool {
 	return bitfields.GetBit(li, i)
 }

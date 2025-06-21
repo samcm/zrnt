@@ -20,6 +20,7 @@ import (
 	"github.com/protolambda/zrnt/eth2/beacon/capella"
 	"github.com/protolambda/zrnt/eth2/beacon/common"
 	"github.com/protolambda/zrnt/eth2/beacon/deneb"
+	"github.com/protolambda/zrnt/eth2/beacon/electra"
 	"github.com/protolambda/zrnt/eth2/beacon/phase0"
 	"github.com/protolambda/zrnt/eth2/configs"
 )
@@ -27,7 +28,7 @@ import (
 // Fork where the test is organized, and thus the state/block/etc. types default to.
 type ForkName string
 
-var AllForks = []ForkName{"phase0", "altair", "bellatrix", "capella", "deneb"}
+var AllForks = []ForkName{"phase0", "altair", "bellatrix", "capella", "deneb", "electra"}
 
 type BaseTransitionTest struct {
 	Spec *common.Spec
@@ -62,6 +63,8 @@ func LoadState(t *testing.T, fork ForkName, name string, readPart TestPartReader
 			state, err = capella.AsBeaconStateView(capella.BeaconStateType(spec).Deserialize(decodingReader))
 		case "deneb":
 			state, err = deneb.AsBeaconStateView(deneb.BeaconStateType(spec).Deserialize(decodingReader))
+		case "electra":
+			state, err = electra.AsBeaconStateView(electra.BeaconStateType(spec).Deserialize(decodingReader))
 		default:
 			t.Fatalf("unrecognized fork name: %s", fork)
 			return nil
@@ -148,6 +151,11 @@ func (c *BlocksTestCase) Load(t *testing.T, forkName ForkName, readPart TestPart
 			LoadSpecObj(t, fmt.Sprintf("blocks_%d", i), dst, readPart)
 			digest := common.ComputeForkDigest(c.Spec.DENEB_FORK_VERSION, valRoot)
 			return dst.Envelope(c.Spec, digest)
+		case "electra":
+			dst := new(electra.SignedBeaconBlock)
+			LoadSpecObj(t, fmt.Sprintf("blocks_%d", i), dst, readPart)
+			digest := common.ComputeForkDigest(c.Spec.ELECTRA_FORK_VERSION, valRoot)
+			return dst.Envelope(c.Spec, digest)
 		default:
 			t.Fatalf("unrecognized fork name: %s", forkName)
 			return nil
@@ -186,6 +194,8 @@ func encodeStateForDiff(spec *common.Spec, state common.BeaconState) (interface{
 	case *capella.BeaconStateView:
 		return s.Raw(spec)
 	case *deneb.BeaconStateView:
+		return s.Raw(spec)
+	case *electra.BeaconStateView:
 		return s.Raw(spec)
 	default:
 		return nil, fmt.Errorf("unrecognized beacon state type: %T", s)

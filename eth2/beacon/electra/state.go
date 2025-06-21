@@ -223,55 +223,55 @@ const (
 func BeaconStateType(spec *common.Spec) *ContainerTypeDef {
 	return ContainerType("BeaconState", []FieldDef{
 		// Versioning
-		{"genesis_time", Uint64Type},
-		{"genesis_validators_root", RootType},
-		{"slot", common.SlotType},
-		{"fork", common.ForkType},
+		{Name: "genesis_time", Type: Uint64Type},
+		{Name: "genesis_validators_root", Type: RootType},
+		{Name: "slot", Type: common.SlotType},
+		{Name: "fork", Type: common.ForkType},
 		// History
-		{"latest_block_header", common.BeaconBlockHeaderType},
-		{"block_roots", phase0.BatchRootsType(spec)},
-		{"state_roots", phase0.BatchRootsType(spec)},
-		{"historical_roots", phase0.HistoricalRootsType(spec)},
+		{Name: "latest_block_header", Type: common.BeaconBlockHeaderType},
+		{Name: "block_roots", Type: phase0.BatchRootsType(spec)},
+		{Name: "state_roots", Type: phase0.BatchRootsType(spec)},
+		{Name: "historical_roots", Type: phase0.HistoricalRootsType(spec)},
 		// Eth1
-		{"eth1_data", common.Eth1DataType},
-		{"eth1_data_votes", phase0.Eth1DataVotesType(spec)},
-		{"eth1_deposit_index", Uint64Type},
+		{Name: "eth1_data", Type: common.Eth1DataType},
+		{Name: "eth1_data_votes", Type: phase0.Eth1DataVotesType(spec)},
+		{Name: "eth1_deposit_index", Type: Uint64Type},
 		// Registry
-		{"validators", phase0.ValidatorsRegistryType(spec)},
-		{"balances", phase0.RegistryBalancesType(spec)},
+		{Name: "validators", Type: phase0.ValidatorsRegistryType(spec)},
+		{Name: "balances", Type: phase0.RegistryBalancesType(spec)},
 		// Randomness
-		{"randao_mixes", phase0.RandaoMixesType(spec)},
+		{Name: "randao_mixes", Type: phase0.RandaoMixesType(spec)},
 		// Slashings
-		{"slashings", phase0.SlashingsType(spec)},
+		{Name: "slashings", Type: phase0.SlashingsType(spec)},
 		// Participation
-		{"previous_epoch_participation", altair.ParticipationRegistryType(spec)},
-		{"current_epoch_participation", altair.ParticipationRegistryType(spec)},
+		{Name: "previous_epoch_participation", Type: altair.ParticipationRegistryType(spec)},
+		{Name: "current_epoch_participation", Type: altair.ParticipationRegistryType(spec)},
 		// Finality
-		{"justification_bits", common.JustificationBitsType},
-		{"previous_justified_checkpoint", common.CheckpointType},
-		{"current_justified_checkpoint", common.CheckpointType},
-		{"finalized_checkpoint", common.CheckpointType},
+		{Name: "justification_bits", Type: common.JustificationBitsType},
+		{Name: "previous_justified_checkpoint", Type: common.CheckpointType},
+		{Name: "current_justified_checkpoint", Type: common.CheckpointType},
+		{Name: "finalized_checkpoint", Type: common.CheckpointType},
 		// Inactivity
-		{"inactivity_scores", altair.InactivityScoresType(spec)},
+		{Name: "inactivity_scores", Type: altair.InactivityScoresType(spec)},
 		// Sync
-		{"current_sync_committee", common.SyncCommitteeType(spec)},
-		{"next_sync_committee", common.SyncCommitteeType(spec)},
+		{Name: "current_sync_committee", Type: common.SyncCommitteeType(spec)},
+		{Name: "next_sync_committee", Type: common.SyncCommitteeType(spec)},
 		// Execution-layer
-		{"latest_execution_payload_header", deneb.ExecutionPayloadHeaderType},
+		{Name: "latest_execution_payload_header", Type: deneb.ExecutionPayloadHeaderType},
 		// Withdrawals
-		{"next_withdrawal_index", common.WithdrawalIndexType},
-		{"next_withdrawal_validator_index", common.ValidatorIndexType},
+		{Name: "next_withdrawal_index", Type: common.WithdrawalIndexType},
+		{Name: "next_withdrawal_validator_index", Type: common.ValidatorIndexType},
 		// Deep history valid from Capella onwards
-		{"historical_summaries", capella.HistoricalSummariesType(spec)},
-		{"deposit_requests_start_index", Uint64Type},
-		{"deposit_balance_to_consume", common.GweiType},
-		{"exit_balance_to_consume", common.GweiType},
-		{"earliest_exit_epoch", common.EpochType},
-		{"consolidation_balance_to_consume", common.GweiType},
-		{"earliest_consolidation_epoch", common.EpochType},
-		{"pending_deposits", common.PendingDepositsType(spec)},
-		{"pending_partial_withdrawals", common.PendingPartialWithdrawalsType(spec)},
-		{"pending_consolidations", common.PendingConsolidationsType(spec)},
+		{Name: "historical_summaries", Type: capella.HistoricalSummariesType(spec)},
+		{Name: "deposit_requests_start_index", Type: Uint64Type},
+		{Name: "deposit_balance_to_consume", Type: common.GweiType},
+		{Name: "exit_balance_to_consume", Type: common.GweiType},
+		{Name: "earliest_exit_epoch", Type: common.EpochType},
+		{Name: "consolidation_balance_to_consume", Type: common.GweiType},
+		{Name: "earliest_consolidation_epoch", Type: common.EpochType},
+		{Name: "pending_deposits", Type: common.PendingDepositsType(spec)},
+		{Name: "pending_partial_withdrawals", Type: common.PendingPartialWithdrawalsType(spec)},
+		{Name: "pending_consolidations", Type: common.PendingConsolidationsType(spec)},
 	})
 }
 
@@ -580,6 +580,8 @@ func (state *BeaconStateView) SetLatestExecutionPayloadHeader(h *deneb.Execution
 	return state.Set(_latestExecutionPayloadHeader, h.View())
 }
 
+// CurrentEpochParticipation and PreviousEpochParticipation are already defined earlier in the file
+
 func (state *BeaconStateView) NextWithdrawalIndex() (common.WithdrawalIndex, error) {
 	v, err := state.Get(_nextWithdrawalIndex)
 	return common.AsWithdrawalIndex(v, err)
@@ -665,10 +667,78 @@ func (state *BeaconStateView) SetEarliestConsolidationEpoch(v common.Epoch) erro
 	return state.Set(_earliestConsolidationEpoch, Uint64View(v))
 }
 
-// not exposed via getters yet (yet):
-//_pendingDeposits
-//_pendingPartialWithdrawals
-//_pendingConsolidations
+func (state *BeaconStateView) PendingPartialWithdrawals() (*ComplexListView, error) {
+	return AsComplexList(state.Get(_pendingPartialWithdrawals))
+}
+
+func (state *BeaconStateView) SetPendingPartialWithdrawals(spec *common.Spec, withdrawals common.PendingPartialWithdrawals) error {
+	withdrawalsView, err := withdrawals.View(spec)
+	if err != nil {
+		return err
+	}
+	return state.Set(_pendingPartialWithdrawals, withdrawalsView)
+}
+
+func (state *BeaconStateView) PendingDeposits() (*ComplexListView, error) {
+	return AsComplexList(state.Get(_pendingDeposits))
+}
+
+func (state *BeaconStateView) SetPendingDeposits(spec *common.Spec, deposits common.PendingDeposits) error {
+	depositsView, err := deposits.View(spec)
+	if err != nil {
+		return err
+	}
+	return state.Set(_pendingDeposits, depositsView)
+}
+
+func (state *BeaconStateView) PendingConsolidations() (*ComplexListView, error) {
+	return AsComplexList(state.Get(_pendingConsolidations))
+}
+
+func (state *BeaconStateView) SetPendingConsolidations(spec *common.Spec, consolidations common.PendingConsolidations) error {
+	consolidationsView, err := consolidations.View(spec)
+	if err != nil {
+		return err
+	}
+	return state.Set(_pendingConsolidations, consolidationsView)
+}
+
+func (state *BeaconStateView) SetEth1DepositIndex(index common.DepositIndex) error {
+	return state.Set(_stateEth1DepositIndex, Uint64View(index))
+}
+
+func (state *BeaconStateView) AppendPendingDeposit(deposit common.PendingDeposit) error {
+	pendingDeposits, err := state.PendingDeposits()
+	if err != nil {
+		return err
+	}
+	// Create a container for the deposit and append it
+	depositContainer := ContainerType("PendingDeposit", []FieldDef{
+		{Name: "pubkey", Type: common.BLSPubkeyType},
+		{Name: "withdrawal_credentials", Type: RootType},
+		{Name: "amount", Type: common.GweiType},
+		{Name: "signature", Type: common.BLSSignatureType},
+		{Name: "slot", Type: common.SlotType},
+	})
+	container := depositContainer.New()
+	if err := container.Set(0, common.ViewPubkey(&deposit.Pubkey)); err != nil {
+		return err
+	}
+	rvView := RootView(deposit.WithdrawalCredentials)
+	if err := container.Set(1, &rvView); err != nil {
+		return err
+	}
+	if err := container.Set(2, Uint64View(deposit.Amount)); err != nil {
+		return err
+	}
+	if err := container.Set(3, common.ViewSignature(&deposit.Signature)); err != nil {
+		return err
+	}
+	if err := container.Set(4, Uint64View(deposit.Slot)); err != nil {
+		return err
+	}
+	return pendingDeposits.Append(container)
+}
 
 func (state *BeaconStateView) ForkSettings(spec *common.Spec) *common.ForkSettings {
 	return &common.ForkSettings{

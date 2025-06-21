@@ -42,8 +42,8 @@ func BlockAttesterSlashingsType(spec *common.Spec) ListTypeDef {
 
 func AttesterSlashingType(spec *common.Spec) *ContainerTypeDef {
 	return ContainerType("AttesterSlashing", []FieldDef{
-		{"attestation_1", IndexedAttestationType(spec)},
-		{"attestation_2", IndexedAttestationType(spec)},
+		{Name: "attestation_1", Type: IndexedAttestationType(spec)},
+		{Name: "attestation_2", Type: IndexedAttestationType(spec)},
 	})
 }
 

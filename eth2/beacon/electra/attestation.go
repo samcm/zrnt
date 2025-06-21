@@ -37,10 +37,10 @@ func (a *SingleAttestation) HashTreeRoot(hFn tree.HashFn) common.Root {
 }
 
 var SingleAttestationType = ContainerType("SingleAttestation", []FieldDef{
-	{"committee_index", common.CommitteeIndexType},
-	{"attester_index", common.ValidatorIndexType},
-	{"data", phase0.AttestationDataType},
-	{"signature", common.BLSSignatureType},
+	{Name: "committee_index", Type: common.CommitteeIndexType},
+	{Name: "attester_index", Type: common.ValidatorIndexType},
+	{Name: "data", Type: phase0.AttestationDataType},
+	{Name: "signature", Type: common.BLSSignatureType},
 })
 
 type Attestation struct {
@@ -78,10 +78,10 @@ func BlockAttestationsType(spec *common.Spec) ListTypeDef {
 
 func AttestationType(spec *common.Spec) *ContainerTypeDef {
 	return ContainerType("Attestation", []FieldDef{
-		{"aggregation_bits", AttestationBitsType(spec)},
-		{"data", phase0.AttestationDataType},
-		{"signature", common.BLSSignatureType},
-		{"committee_bits", CommitteeBitsType(spec)},
+		{Name: "aggregation_bits", Type: AttestationBitsType(spec)},
+		{Name: "data", Type: phase0.AttestationDataType},
+		{Name: "signature", Type: common.BLSSignatureType},
+		{Name: "committee_bits", Type: CommitteeBitsType(spec)},
 	})
 }
 
@@ -115,9 +115,9 @@ func (p *IndexedAttestation) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) co
 
 func IndexedAttestationType(spec *common.Spec) *ContainerTypeDef {
 	return ContainerType("IndexedAttestation", []FieldDef{
-		{"attesting_indices", common.SlotCommitteeIndicesType(spec)},
-		{"data", phase0.AttestationDataType},
-		{"signature", common.BLSSignatureType},
+		{Name: "attesting_indices", Type: common.SlotCommitteeIndicesType(spec)},
+		{Name: "data", Type: phase0.AttestationDataType},
+		{Name: "signature", Type: common.BLSSignatureType},
 	})
 }
 
