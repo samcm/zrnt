@@ -143,6 +143,13 @@ func (li PendingDeposits) HashTreeRoot(spec *Spec, hFn tree.HashFn) Root {
 }
 
 func (li PendingDeposits) View(spec *Spec) (*ComplexListView, error) {
+	typ := ComplexListType(PendingDepositType, uint64(spec.PENDING_DEPOSITS_LIMIT))
+	
+	// Handle empty list case
+	if len(li) == 0 {
+		return AsComplexList(typ.New(), nil)
+	}
+	
 	// Convert each PendingDeposit to a view
 	tmp := make([]View, len(li))
 	for i, deposit := range li {
@@ -170,7 +177,6 @@ func (li PendingDeposits) View(spec *Spec) (*ComplexListView, error) {
 		tmp[i] = depositView
 	}
 	
-	typ := ComplexListType(PendingDepositType, uint64(spec.PENDING_DEPOSITS_LIMIT))
 	return AsComplexList(typ.FromElements(tmp...))
 }
 
@@ -213,6 +219,13 @@ func (li PendingPartialWithdrawals) HashTreeRoot(spec *Spec, hFn tree.HashFn) Ro
 }
 
 func (li PendingPartialWithdrawals) View(spec *Spec) (*ComplexListView, error) {
+	typ := ComplexListType(PendingPartialWithdrawalType, uint64(spec.PENDING_PARTIAL_WITHDRAWALS_LIMIT))
+	
+	// Handle empty list case
+	if len(li) == 0 {
+		return AsComplexList(typ.New(), nil)
+	}
+	
 	// Convert each PendingPartialWithdrawal to a view
 	tmp := make([]View, len(li))
 	for i, withdrawal := range li {
@@ -233,7 +246,6 @@ func (li PendingPartialWithdrawals) View(spec *Spec) (*ComplexListView, error) {
 		tmp[i] = withdrawalView
 	}
 	
-	typ := ComplexListType(PendingPartialWithdrawalType, uint64(spec.PENDING_PARTIAL_WITHDRAWALS_LIMIT))
 	return AsComplexList(typ.FromElements(tmp...))
 }
 
@@ -276,6 +288,13 @@ func (li PendingConsolidations) HashTreeRoot(spec *Spec, hFn tree.HashFn) Root {
 }
 
 func (li PendingConsolidations) View(spec *Spec) (*ComplexListView, error) {
+	typ := ComplexListType(PendingConsolidationType, uint64(spec.PENDING_CONSOLIDATIONS_LIMIT))
+	
+	// Handle empty list case
+	if len(li) == 0 {
+		return AsComplexList(typ.New(), nil)
+	}
+	
 	// Convert each PendingConsolidation to a view
 	tmp := make([]View, len(li))
 	for i, consolidation := range li {
@@ -293,6 +312,5 @@ func (li PendingConsolidations) View(spec *Spec) (*ComplexListView, error) {
 		tmp[i] = consolidationView
 	}
 	
-	typ := ComplexListType(PendingConsolidationType, uint64(spec.PENDING_CONSOLIDATIONS_LIMIT))
 	return AsComplexList(typ.FromElements(tmp...))
 }
