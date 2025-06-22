@@ -359,21 +359,17 @@ func (spec *Spec) Wrap(des SpecObj) SSZObj {
 
 func (spec *Spec) ForkVersion(slot Slot) Version {
 	epoch := spec.SlotToEpoch(slot)
-	// Check forks in reverse order to handle when multiple forks are at the same epoch
-	if spec.ELECTRA_FORK_EPOCH != FAR_FUTURE_EPOCH && epoch >= spec.ELECTRA_FORK_EPOCH {
+	if epoch < spec.ALTAIR_FORK_EPOCH {
+		return spec.GENESIS_FORK_VERSION
+	} else if epoch < spec.BELLATRIX_FORK_EPOCH {
+		return spec.ALTAIR_FORK_VERSION
+	} else if epoch < spec.CAPELLA_FORK_EPOCH {
+		return spec.BELLATRIX_FORK_VERSION
+	} else if epoch < spec.DENEB_FORK_EPOCH {
+		return spec.CAPELLA_FORK_VERSION
+	} else if epoch < spec.ELECTRA_FORK_EPOCH {
+		return spec.DENEB_FORK_VERSION
+	} else {
 		return spec.ELECTRA_FORK_VERSION
 	}
-	if spec.DENEB_FORK_EPOCH != FAR_FUTURE_EPOCH && epoch >= spec.DENEB_FORK_EPOCH {
-		return spec.DENEB_FORK_VERSION
-	}
-	if spec.CAPELLA_FORK_EPOCH != FAR_FUTURE_EPOCH && epoch >= spec.CAPELLA_FORK_EPOCH {
-		return spec.CAPELLA_FORK_VERSION
-	}
-	if spec.BELLATRIX_FORK_EPOCH != FAR_FUTURE_EPOCH && epoch >= spec.BELLATRIX_FORK_EPOCH {
-		return spec.BELLATRIX_FORK_VERSION
-	}
-	if spec.ALTAIR_FORK_EPOCH != FAR_FUTURE_EPOCH && epoch >= spec.ALTAIR_FORK_EPOCH {
-		return spec.ALTAIR_FORK_VERSION
-	}
-	return spec.GENESIS_FORK_VERSION
 }

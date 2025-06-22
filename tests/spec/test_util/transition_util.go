@@ -245,21 +245,54 @@ func RunTransitionTest(t *testing.T, forks []ForkName, runnerName string, handle
 		c.Check(t)
 	})
 	t.Run("minimal", func(t *testing.T) {
-		spec := *configs.Minimal
-		spec.ExecutionEngine = &execution.NoOpExecutionEngine{}
 		for _, fork := range forks {
 			t.Run(string(fork), func(t *testing.T) {
+				spec := *configs.Minimal
+				spec.ExecutionEngine = &execution.NoOpExecutionEngine{}
+				// Configure fork epochs for testing - tests assume all forks at epoch 0
+				configureForkEpochsForTesting(&spec, fork)
 				RunHandler(t, runnerName+"/"+handlerName, caseRunner, &spec, fork)
 			})
 		}
 	})
 	t.Run("mainnet", func(t *testing.T) {
-		spec := *configs.Mainnet
-		spec.ExecutionEngine = &execution.NoOpExecutionEngine{}
 		for _, fork := range forks {
 			t.Run(string(fork), func(t *testing.T) {
+				spec := *configs.Mainnet
+				spec.ExecutionEngine = &execution.NoOpExecutionEngine{}
+				// Configure fork epochs for testing - tests assume all forks at epoch 0
+				configureForkEpochsForTesting(&spec, fork)
 				RunHandler(t, runnerName+"/"+handlerName, caseRunner, &spec, fork)
 			})
 		}
 	})
+}
+
+// configureForkEpochsForTesting sets the fork epochs to match test data expectations
+func configureForkEpochsForTesting(spec *common.Spec, fork ForkName) {
+	// Tests are generated with all applicable forks at epoch 0
+	switch fork {
+	case "phase0":
+		// Keep all forks at FAR_FUTURE_EPOCH for phase0
+	case "altair":
+		spec.ALTAIR_FORK_EPOCH = 0
+	case "bellatrix":
+		spec.ALTAIR_FORK_EPOCH = 0
+		spec.BELLATRIX_FORK_EPOCH = 0
+	case "capella":
+		spec.ALTAIR_FORK_EPOCH = 0
+		spec.BELLATRIX_FORK_EPOCH = 0
+		spec.CAPELLA_FORK_EPOCH = 0
+	case "deneb":
+		spec.ALTAIR_FORK_EPOCH = 0
+		spec.BELLATRIX_FORK_EPOCH = 0
+		spec.CAPELLA_FORK_EPOCH = 0
+		spec.DENEB_FORK_EPOCH = 0
+	case "electra":
+		spec.ALTAIR_FORK_EPOCH = 0
+		spec.BELLATRIX_FORK_EPOCH = 0
+		spec.CAPELLA_FORK_EPOCH = 0
+		spec.DENEB_FORK_EPOCH = 0
+		spec.ELECTRA_FORK_EPOCH = 0
+	}
 }

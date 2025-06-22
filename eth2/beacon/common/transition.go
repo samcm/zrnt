@@ -136,9 +136,11 @@ func PostSlotTransition(ctx context.Context, spec *Spec, epc *EpochsContext, sta
 		if !ok {
 			return fmt.Errorf("unknown pubkey for proposer %d", proposer)
 		}
-		// Use the fork version based on the block slot, not the state's current fork version
-		version := spec.ForkVersion(benv.Slot)
-		if !benv.VerifySignatureVersioned(spec, version, genValRoot, proposer, pub) {
+		// Use the fork version based on the block's slot, not the state's current fork
+		// This handles fork transitions correctly where the block is signed with the new fork
+		// version but the state hasn't upgraded yet
+		blockForkVersion := spec.ForkVersion(benv.Slot)
+		if !benv.VerifySignatureVersioned(spec, blockForkVersion, genValRoot, proposer, pub) {
 			return errors.New("block has invalid signature")
 		}
 	}

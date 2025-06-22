@@ -287,5 +287,11 @@ func UpgradeToElectra(spec *common.Spec, epc *common.EpochsContext, pre *deneb.B
 		return nil, err
 	}
 
+	// Set deposit balance to consume to the same as exit balance to consume
+	// This ensures deposits can be processed immediately after the fork
+	if err := postView.SetDepositBalanceToConsume(exitBalanceToConsume); err != nil {
+		return nil, err
+	}
+
 	return postView, nil
 }

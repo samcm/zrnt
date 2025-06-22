@@ -22,6 +22,7 @@ import (
 type FinalityTestCase struct {
 	test_util.BaseTransitionTest
 	Blocks []*common.BeaconBlockEnvelope
+	ForkName test_util.ForkName
 }
 
 type BlocksCountMeta struct {
@@ -30,6 +31,7 @@ type BlocksCountMeta struct {
 
 func (c *FinalityTestCase) Load(t *testing.T, forkName test_util.ForkName, readPart test_util.TestPartReader) {
 	c.BaseTransitionTest.Load(t, forkName, readPart)
+	c.ForkName = forkName
 	p := readPart.Part("meta.yaml")
 	dec := yaml.NewDecoder(p)
 	m := &BlocksCountMeta{}
