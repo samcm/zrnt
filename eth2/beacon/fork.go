@@ -63,20 +63,21 @@ func (d *ForkDecoder) BlockAllocator(digest common.ForkDigest) (func() OpaqueBlo
 }
 
 func (d *ForkDecoder) ForkDigest(epoch common.Epoch) common.ForkDigest {
-	if epoch < d.Spec.ALTAIR_FORK_EPOCH {
-		return d.Genesis
-	} else if epoch < d.Spec.BELLATRIX_FORK_EPOCH {
-		return d.Altair
-	} else if epoch < d.Spec.CAPELLA_FORK_EPOCH {
-		return d.Bellatrix
-	} else if epoch < d.Spec.DENEB_FORK_EPOCH {
-		return d.Capella
-	} else if epoch < d.Spec.ELECTRA_FORK_EPOCH {
-		return d.Deneb
-	} else if epoch < d.Spec.FULU_FORK_EPOCH {
-		return d.Electra
-	} else {
+	// Use >= comparisons to handle the case where multiple forks are at the same epoch
+	if epoch >= d.Spec.FULU_FORK_EPOCH {
 		return d.Fulu
+	} else if epoch >= d.Spec.ELECTRA_FORK_EPOCH {
+		return d.Electra
+	} else if epoch >= d.Spec.DENEB_FORK_EPOCH {
+		return d.Deneb
+	} else if epoch >= d.Spec.CAPELLA_FORK_EPOCH {
+		return d.Capella
+	} else if epoch >= d.Spec.BELLATRIX_FORK_EPOCH {
+		return d.Bellatrix
+	} else if epoch >= d.Spec.ALTAIR_FORK_EPOCH {
+		return d.Altair
+	} else {
+		return d.Genesis
 	}
 }
 

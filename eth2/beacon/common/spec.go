@@ -359,17 +359,19 @@ func (spec *Spec) Wrap(des SpecObj) SSZObj {
 
 func (spec *Spec) ForkVersion(slot Slot) Version {
 	epoch := spec.SlotToEpoch(slot)
-	if epoch < spec.ALTAIR_FORK_EPOCH {
-		return spec.GENESIS_FORK_VERSION
-	} else if epoch < spec.BELLATRIX_FORK_EPOCH {
-		return spec.ALTAIR_FORK_VERSION
-	} else if epoch < spec.CAPELLA_FORK_EPOCH {
-		return spec.BELLATRIX_FORK_VERSION
-	} else if epoch < spec.DENEB_FORK_EPOCH {
-		return spec.CAPELLA_FORK_VERSION
-	} else if epoch < spec.ELECTRA_FORK_EPOCH {
-		return spec.DENEB_FORK_VERSION
-	} else {
+	// For test compatibility: when all forks are at epoch 0, 
+	// we need to return the highest active fork version
+	if epoch >= spec.ELECTRA_FORK_EPOCH {
 		return spec.ELECTRA_FORK_VERSION
+	} else if epoch >= spec.DENEB_FORK_EPOCH {
+		return spec.DENEB_FORK_VERSION
+	} else if epoch >= spec.CAPELLA_FORK_EPOCH {
+		return spec.CAPELLA_FORK_VERSION
+	} else if epoch >= spec.BELLATRIX_FORK_EPOCH {
+		return spec.BELLATRIX_FORK_VERSION
+	} else if epoch >= spec.ALTAIR_FORK_EPOCH {
+		return spec.ALTAIR_FORK_VERSION
+	} else {
+		return spec.GENESIS_FORK_VERSION
 	}
 }
