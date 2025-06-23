@@ -216,6 +216,7 @@ func CompareStates(spec *common.Spec, a common.BeaconState, b common.BeaconState
 		if err != nil {
 			return "", err
 		}
+		
 		if diff, equal := messagediff.PrettyDiff(pre, post, messagediff.SliceWeakEmptyOption{}); !equal {
 			return diff, nil
 		}

@@ -133,9 +133,11 @@ func UpgradeToElectra(spec *common.Spec, epc *common.EpochsContext, pre *deneb.B
 		HistoricalSummaries:           rawPre.HistoricalSummaries,
 		// Initialize new Electra fields
 		DepositRequestsStartIndex:     Uint64View(UNSET_DEPOSIT_REQUESTS_START_INDEX),
-		// The test expects these to be initialized to MIN_PER_EPOCH_CHURN_LIMIT_ELECTRA
-		// This allows immediate processing of deposits/exits after the fork
-		DepositBalanceToConsume:       common.Gwei(spec.MIN_PER_EPOCH_CHURN_LIMIT_ELECTRA),
+		// Initialize churn limits
+		// DepositBalanceToConsume starts at 0
+		DepositBalanceToConsume:       0,
+		// ExitBalanceToConsume is initialized to MIN_PER_EPOCH_CHURN_LIMIT_ELECTRA
+		// to allow immediate exits after the fork
 		ExitBalanceToConsume:          common.Gwei(spec.MIN_PER_EPOCH_CHURN_LIMIT_ELECTRA),
 		EarliestExitEpoch:             earliestExitEpoch,
 		ConsolidationBalanceToConsume: 0,
@@ -273,19 +275,24 @@ func UpgradeToElectra(spec *common.Spec, epc *common.EpochsContext, pre *deneb.B
 		}
 	}
 
-	// Set the churn limits on the view to match test expectations
-	// The test expects these to be initialized to MIN_PER_EPOCH_CHURN_LIMIT_ELECTRA
-	if err := postView.SetDepositBalanceToConsume(common.Gwei(spec.MIN_PER_EPOCH_CHURN_LIMIT_ELECTRA)); err != nil {
+	// For large validator sets, we need to calculate the actual churn limits
+	// Update ExitBalanceToConsume to the calculated churn limit
+	exitChurnLimit, err := GetActivationExitChurnLimit(spec, postView)
+	if err != nil {
 		return nil, err
 	}
-	if err := postView.SetExitBalanceToConsume(common.Gwei(spec.MIN_PER_EPOCH_CHURN_LIMIT_ELECTRA)); err != nil {
+	if err := postView.SetExitBalanceToConsume(exitChurnLimit); err != nil {
 		return nil, err
 	}
-	// ConsolidationBalanceToConsume remains 0
 	
-	// Debug: verify the values were set
-	// depositBalance, _ := postView.DepositBalanceToConsume()
-	// fmt.Printf("DEBUG: After setting, DepositBalanceToConsume = %d (0x%x)\n", depositBalance, depositBalance)
+	// ConsolidationBalanceToConsume should be calculated too
+	consolidationChurnLimit, err := GetConsolidationChurnLimit(spec, postView)
+	if err != nil {
+		return nil, err
+	}
+	if err := postView.SetConsolidationBalanceToConsume(consolidationChurnLimit); err != nil {
+		return nil, err
+	}
 
 	return postView, nil
 }
