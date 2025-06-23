@@ -628,7 +628,7 @@ func (state *BeaconStateView) DepositBalanceToConsume() (common.Gwei, error) {
 }
 
 func (state *BeaconStateView) SetDepositBalanceToConsume(v common.Gwei) error {
-	return state.Set(_depositBalanceToConsume, (*Uint64View)(&v))
+	return state.Set(_depositBalanceToConsume, Uint64View(v))
 }
 
 func (state *BeaconStateView) ExitBalanceToConsume() (common.Gwei, error) {
