@@ -88,6 +88,11 @@ func (c *CachedPubkey) Pubkey() (*blsu.Pubkey, error) {
 }
 
 func ViewPubkey(pub *BLSPubkey) *BLSPubkeyView {
+	if pub == nil {
+		// Create a zero pubkey
+		var zeroPub BLSPubkey
+		pub = &zeroPub
+	}
 	v, _ := BLSPubkeyType.Deserialize(codec.NewDecodingReader(bytes.NewReader(pub[:]), 48))
 	return &BLSPubkeyView{v.(*BasicVectorView)}
 }
@@ -156,7 +161,12 @@ func (p *BLSSignature) Signature() (*blsu.Signature, error) {
 }
 
 func ViewSignature(sig *BLSSignature) *BLSSignatureView {
-	v, _ := BLSSignatureType.Deserialize(codec.NewDecodingReader(bytes.NewReader(sig[:]), 48))
+	if sig == nil {
+		// Create a zero signature
+		var zeroSig BLSSignature
+		sig = &zeroSig
+	}
+	v, _ := BLSSignatureType.Deserialize(codec.NewDecodingReader(bytes.NewReader(sig[:]), 96))
 	return &BLSSignatureView{v.(*BasicVectorView)}
 }
 

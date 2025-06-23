@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/protolambda/zrnt/eth2/beacon/deneb"
+	"github.com/protolambda/zrnt/eth2/beacon/electra"
 	"testing"
 
 	"github.com/protolambda/zrnt/eth2/beacon/altair"
@@ -47,6 +48,9 @@ func NewEpochTest(fn stateFn) test_util.TransitionCaseMaker {
 func TestEffectiveBalanceUpdates(t *testing.T) {
 	test_util.RunTransitionTest(t, test_util.AllForks, "epoch_processing", "effective_balance_updates",
 		NewEpochTest(func(spec *common.Spec, fork test_util.ForkName, state common.BeaconState, epc *common.EpochsContext, flats []common.FlatValidator) error {
+			if fork == "electra" {
+				return electra.ProcessEffectiveBalanceUpdates(context.Background(), spec, epc, flats, state)
+			}
 			return phase0.ProcessEffectiveBalanceUpdates(context.Background(), spec, epc, flats, state)
 		}))
 }
@@ -66,7 +70,7 @@ func TestHistoricalRootsUpdate(t *testing.T) {
 }
 
 func TestHistoricalSummariesUpdate(t *testing.T) {
-	test_util.RunTransitionTest(t, []test_util.ForkName{"capella"}, "epoch_processing", "historical_summaries_update",
+	test_util.RunTransitionTest(t, []test_util.ForkName{"capella", "deneb", "electra"}, "epoch_processing", "historical_summaries_update",
 		NewEpochTest(func(spec *common.Spec, fork test_util.ForkName, state common.BeaconState, epc *common.EpochsContext, flats []common.FlatValidator) error {
 			return capella.ProcessHistoricalSummariesUpdate(context.Background(), spec, epc, state.(capella.HistoricalSummariesBeaconState))
 		}))
@@ -117,7 +121,7 @@ func TestParticipationRecordUpdates(t *testing.T) {
 }
 
 func TestParticipationFlagUpdates(t *testing.T) {
-	test_util.RunTransitionTest(t, []test_util.ForkName{"altair", "bellatrix", "capella", "deneb"}, "epoch_processing", "participation_flag_updates",
+	test_util.RunTransitionTest(t, []test_util.ForkName{"altair", "bellatrix", "capella", "deneb", "electra"}, "epoch_processing", "participation_flag_updates",
 		NewEpochTest(func(spec *common.Spec, fork test_util.ForkName, state common.BeaconState, epc *common.EpochsContext, flats []common.FlatValidator) error {
 			if s, ok := state.(altair.AltairLikeBeaconState); ok {
 				return altair.ProcessParticipationFlagUpdates(context.Background(), spec, s)
@@ -142,6 +146,8 @@ func TestRegistryUpdates(t *testing.T) {
 				return phase0.ProcessEpochRegistryUpdates(context.Background(), spec, epc, flats, state)
 			case "deneb":
 				return deneb.ProcessEpochRegistryUpdates(context.Background(), spec, epc, flats, state)
+			case "electra":
+				return electra.ProcessRegistryUpdates(context.Background(), spec, epc, flats, state)
 			default:
 				return fmt.Errorf("unrecognized fork: %s", fork)
 			}
@@ -172,6 +178,9 @@ func TestRewardsPenalties(t *testing.T) {
 func TestSlashings(t *testing.T) {
 	test_util.RunTransitionTest(t, test_util.AllForks, "epoch_processing", "slashings",
 		NewEpochTest(func(spec *common.Spec, fork test_util.ForkName, state common.BeaconState, epc *common.EpochsContext, flats []common.FlatValidator) error {
+			if fork == "electra" {
+				return electra.ProcessSlashings(context.Background(), spec, epc, flats, state)
+			}
 			return phase0.ProcessEpochSlashings(context.Background(), spec, epc, flats, state)
 		}))
 }
@@ -184,9 +193,12 @@ func TestSlashingsReset(t *testing.T) {
 }
 
 func TestSyncCommitteeUpdates(t *testing.T) {
-	test_util.RunTransitionTest(t, []test_util.ForkName{"altair", "bellatrix", "capella", "deneb"}, "epoch_processing", "sync_committee_updates",
+	test_util.RunTransitionTest(t, []test_util.ForkName{"altair", "bellatrix", "capella", "deneb", "electra"}, "epoch_processing", "sync_committee_updates",
 		NewEpochTest(func(spec *common.Spec, fork test_util.ForkName, state common.BeaconState, epc *common.EpochsContext, flats []common.FlatValidator) error {
 			if s, ok := state.(common.SyncCommitteeBeaconState); ok {
+				if fork == "electra" {
+					return electra.ProcessSyncCommitteeUpdates(context.Background(), spec, epc, s)
+				}
 				return altair.ProcessSyncCommitteeUpdates(context.Background(), spec, epc, s)
 			} else {
 				return fmt.Errorf("unrecognized state type: %T", state)

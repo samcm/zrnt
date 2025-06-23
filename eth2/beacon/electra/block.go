@@ -25,7 +25,7 @@ func (b *SignedBeaconBlock) Envelope(spec *common.Spec, digest common.ForkDigest
 		ForkDigest:        digest,
 		BeaconBlockHeader: *header,
 		Body:              &b.Message.Body,
-		BlockRoot:         header.HashTreeRoot(tree.GetHashFn()),
+		BlockRoot:         b.Message.HashTreeRoot(spec, tree.GetHashFn()),
 		Signature:         b.Signature,
 	}
 }
@@ -87,18 +87,18 @@ func (b *BeaconBlock) HashTreeRoot(spec *common.Spec, hFn tree.HashFn) common.Ro
 
 func BeaconBlockType(spec *common.Spec) *ContainerTypeDef {
 	return ContainerType("BeaconBlock", []FieldDef{
-		{"slot", common.SlotType},
-		{"proposer_index", common.ValidatorIndexType},
-		{"parent_root", RootType},
-		{"state_root", RootType},
-		{"body", BeaconBlockBodyType(spec)},
+		{Name: "slot", Type: common.SlotType},
+		{Name: "proposer_index", Type: common.ValidatorIndexType},
+		{Name: "parent_root", Type: RootType},
+		{Name: "state_root", Type: RootType},
+		{Name: "body", Type: BeaconBlockBodyType(spec)},
 	})
 }
 
 func SignedBeaconBlockType(spec *common.Spec) *ContainerTypeDef {
 	return ContainerType("SignedBeaconBlock", []FieldDef{
-		{"message", BeaconBlockType(spec)},
-		{"signature", common.BLSSignatureType},
+		{Name: "message", Type: BeaconBlockType(spec)},
+		{Name: "signature", Type: common.BLSSignatureType},
 	})
 }
 
@@ -256,23 +256,23 @@ func (b *BeaconBlockBody) GetBlobKZGCommitments() []common.KZGCommitment {
 
 func BeaconBlockBodyType(spec *common.Spec) *ContainerTypeDef {
 	return ContainerType("BeaconBlockBody", []FieldDef{
-		{"randao_reveal", common.BLSSignatureType},
-		{"eth1_data", common.Eth1DataType}, // Eth1 data vote
-		{"graffiti", common.Bytes32Type},   // Arbitrary data
+		{Name: "randao_reveal", Type: common.BLSSignatureType},
+		{Name: "eth1_data", Type: common.Eth1DataType}, // Eth1 data vote
+		{Name: "graffiti", Type: common.Bytes32Type},   // Arbitrary data
 		// Operations
-		{"proposer_slashings", phase0.BlockProposerSlashingsType(spec)},
-		{"attester_slashings", BlockAttesterSlashingsType(spec)},
-		{"attestations", BlockAttestationsType(spec)},
-		{"deposits", phase0.BlockDepositsType(spec)},
-		{"voluntary_exits", phase0.BlockVoluntaryExitsType(spec)},
-		{"sync_aggregate", altair.SyncAggregateType(spec)},
+		{Name: "proposer_slashings", Type: phase0.BlockProposerSlashingsType(spec)},
+		{Name: "attester_slashings", Type: BlockAttesterSlashingsType(spec)},
+		{Name: "attestations", Type: BlockAttestationsType(spec)},
+		{Name: "deposits", Type: phase0.BlockDepositsType(spec)},
+		{Name: "voluntary_exits", Type: phase0.BlockVoluntaryExitsType(spec)},
+		{Name: "sync_aggregate", Type: altair.SyncAggregateType(spec)},
 		// Capella
-		{"execution_payload", deneb.ExecutionPayloadType(spec)},
-		{"bls_to_execution_changes", common.BlockSignedBLSToExecutionChangesType(spec)},
+		{Name: "execution_payload", Type: deneb.ExecutionPayloadType(spec)},
+		{Name: "bls_to_execution_changes", Type: common.BlockSignedBLSToExecutionChangesType(spec)},
 		// Deneb
-		{"blob_kzg_commitments", deneb.KZGCommitmentsType(spec)},
+		{Name: "blob_kzg_commitments", Type: deneb.KZGCommitmentsType(spec)},
 		// Electra
-		{"execution_requests", ExecutionRequestsType(spec)},
+		{Name: "execution_requests", Type: ExecutionRequestsType(spec)},
 	})
 }
 

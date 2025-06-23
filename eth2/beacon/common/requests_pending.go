@@ -142,6 +142,44 @@ func (li PendingDeposits) HashTreeRoot(spec *Spec, hFn tree.HashFn) Root {
 	}, length, uint64(spec.PENDING_DEPOSITS_LIMIT))
 }
 
+func (li PendingDeposits) View(spec *Spec) (*ComplexListView, error) {
+	typ := ComplexListType(PendingDepositType, uint64(spec.PENDING_DEPOSITS_LIMIT))
+	
+	// Handle empty list case
+	if len(li) == 0 {
+		return AsComplexList(typ.New(), nil)
+	}
+	
+	// Convert each PendingDeposit to a view
+	tmp := make([]View, len(li))
+	for i, deposit := range li {
+		depositView := PendingDepositType.New()
+		depositContainer, _ := AsContainer(depositView, nil)
+		
+		// Set fields
+		if err := depositContainer.Set(0, ViewPubkey(&deposit.Pubkey)); err != nil {
+			return nil, err
+		}
+		rvView := RootView(deposit.WithdrawalCredentials)
+		if err := depositContainer.Set(1, &rvView); err != nil {
+			return nil, err
+		}
+		if err := depositContainer.Set(2, Uint64View(deposit.Amount)); err != nil {
+			return nil, err
+		}
+		if err := depositContainer.Set(3, ViewSignature(&deposit.Signature)); err != nil {
+			return nil, err
+		}
+		if err := depositContainer.Set(4, Uint64View(deposit.Slot)); err != nil {
+			return nil, err
+		}
+		
+		tmp[i] = depositView
+	}
+	
+	return AsComplexList(typ.FromElements(tmp...))
+}
+
 type PendingPartialWithdrawals []PendingPartialWithdrawal
 
 func PendingPartialWithdrawalsType(spec *Spec) ListTypeDef {
@@ -180,6 +218,37 @@ func (li PendingPartialWithdrawals) HashTreeRoot(spec *Spec, hFn tree.HashFn) Ro
 	}, length, uint64(spec.PENDING_PARTIAL_WITHDRAWALS_LIMIT))
 }
 
+func (li PendingPartialWithdrawals) View(spec *Spec) (*ComplexListView, error) {
+	typ := ComplexListType(PendingPartialWithdrawalType, uint64(spec.PENDING_PARTIAL_WITHDRAWALS_LIMIT))
+	
+	// Handle empty list case
+	if len(li) == 0 {
+		return AsComplexList(typ.New(), nil)
+	}
+	
+	// Convert each PendingPartialWithdrawal to a view
+	tmp := make([]View, len(li))
+	for i, withdrawal := range li {
+		withdrawalView := PendingPartialWithdrawalType.New()
+		withdrawalContainer, _ := AsContainer(withdrawalView, nil)
+		
+		// Set fields
+		if err := withdrawalContainer.Set(0, Uint64View(withdrawal.ValidatorIndex)); err != nil {
+			return nil, err
+		}
+		if err := withdrawalContainer.Set(1, Uint64View(withdrawal.Amount)); err != nil {
+			return nil, err
+		}
+		if err := withdrawalContainer.Set(2, Uint64View(withdrawal.WithdrawableEpoch)); err != nil {
+			return nil, err
+		}
+		
+		tmp[i] = withdrawalView
+	}
+	
+	return AsComplexList(typ.FromElements(tmp...))
+}
+
 type PendingConsolidations []PendingConsolidation
 
 func PendingConsolidationsType(spec *Spec) ListTypeDef {
@@ -216,4 +285,32 @@ func (li PendingConsolidations) HashTreeRoot(spec *Spec, hFn tree.HashFn) Root {
 		}
 		return nil
 	}, length, uint64(spec.PENDING_CONSOLIDATIONS_LIMIT))
+}
+
+func (li PendingConsolidations) View(spec *Spec) (*ComplexListView, error) {
+	typ := ComplexListType(PendingConsolidationType, uint64(spec.PENDING_CONSOLIDATIONS_LIMIT))
+	
+	// Handle empty list case
+	if len(li) == 0 {
+		return AsComplexList(typ.New(), nil)
+	}
+	
+	// Convert each PendingConsolidation to a view
+	tmp := make([]View, len(li))
+	for i, consolidation := range li {
+		consolidationView := PendingConsolidationType.New()
+		consolidationContainer, _ := AsContainer(consolidationView, nil)
+		
+		// Set fields
+		if err := consolidationContainer.Set(0, Uint64View(consolidation.SourceIndex)); err != nil {
+			return nil, err
+		}
+		if err := consolidationContainer.Set(1, Uint64View(consolidation.TargetIndex)); err != nil {
+			return nil, err
+		}
+		
+		tmp[i] = consolidationView
+	}
+	
+	return AsComplexList(typ.FromElements(tmp...))
 }

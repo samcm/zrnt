@@ -1,9 +1,11 @@
 package operations
 
 import (
+	"context"
 	"testing"
 
 	"github.com/protolambda/zrnt/eth2/beacon/common"
+	"github.com/protolambda/zrnt/eth2/beacon/electra"
 	"github.com/protolambda/zrnt/eth2/beacon/phase0"
 	"github.com/protolambda/zrnt/tests/spec/test_util"
 )
@@ -23,6 +25,13 @@ func (c *DepositTestCase) Run() error {
 	if err != nil {
 		return err
 	}
+	
+	// Check if this is an Electra state
+	if s, ok := c.Pre.(*electra.BeaconStateView); ok {
+		// Electra has modified deposit processing
+		return electra.ProcessDeposit(context.Background(), c.Spec, epc, s, &c.Deposit)
+	}
+	
 	return phase0.ProcessDeposit(c.Spec, epc, c.Pre, &c.Deposit, false)
 }
 

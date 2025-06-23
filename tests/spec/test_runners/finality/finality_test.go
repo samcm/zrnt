@@ -7,6 +7,7 @@ import (
 
 	"github.com/protolambda/zrnt/eth2/beacon/capella"
 	"github.com/protolambda/zrnt/eth2/beacon/deneb"
+	"github.com/protolambda/zrnt/eth2/beacon/electra"
 
 	"gopkg.in/yaml.v3"
 
@@ -21,6 +22,7 @@ import (
 type FinalityTestCase struct {
 	test_util.BaseTransitionTest
 	Blocks []*common.BeaconBlockEnvelope
+	ForkName test_util.ForkName
 }
 
 type BlocksCountMeta struct {
@@ -29,6 +31,7 @@ type BlocksCountMeta struct {
 
 func (c *FinalityTestCase) Load(t *testing.T, forkName test_util.ForkName, readPart test_util.TestPartReader) {
 	c.BaseTransitionTest.Load(t, forkName, readPart)
+	c.ForkName = forkName
 	p := readPart.Part("meta.yaml")
 	dec := yaml.NewDecoder(p)
 	m := &BlocksCountMeta{}
@@ -63,6 +66,11 @@ func (c *FinalityTestCase) Load(t *testing.T, forkName test_util.ForkName, readP
 			dst := new(deneb.SignedBeaconBlock)
 			test_util.LoadSpecObj(t, fmt.Sprintf("blocks_%d", i), dst, readPart)
 			digest := common.ComputeForkDigest(c.Spec.DENEB_FORK_VERSION, valRoot)
+			return dst.Envelope(c.Spec, digest)
+		case "electra":
+			dst := new(electra.SignedBeaconBlock)
+			test_util.LoadSpecObj(t, fmt.Sprintf("blocks_%d", i), dst, readPart)
+			digest := common.ComputeForkDigest(c.Spec.ELECTRA_FORK_VERSION, valRoot)
 			return dst.Envelope(c.Spec, digest)
 		default:
 			t.Fatal(fmt.Errorf("unrecognized fork name: %s", forkName))

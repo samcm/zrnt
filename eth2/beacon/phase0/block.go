@@ -22,7 +22,7 @@ func (b *SignedBeaconBlock) Envelope(spec *common.Spec, digest common.ForkDigest
 		ForkDigest:        digest,
 		BeaconBlockHeader: *header,
 		Body:              &b.Message.Body,
-		BlockRoot:         header.HashTreeRoot(tree.GetHashFn()),
+		BlockRoot:         b.Message.HashTreeRoot(spec, tree.GetHashFn()),
 		Signature:         b.Signature,
 	}
 }
